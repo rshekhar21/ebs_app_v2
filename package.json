@@ -1,0 +1,83 @@
+{
+  "name": "ebs",
+  "version": "1.0.2",
+  "description": "New EBS App Desktop application",
+  "main": "index.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "release": "electron-builder --publish=always"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rshekhar21/ebs_app_v2"
+  },
+  "build": {
+    "appId": "com.myebs.app",
+    "asar": true,
+    "asarUnpack": "unpack",
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico",
+      "uninstallDisplayName": "EBS",
+      "license": "license.md",
+      "allowToChangeInstallationDirectory": true,
+      "runAfterFinish": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "EBS",
+      "perMachine": true
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "rshekhar21",
+        "releaseType": "release",
+        "private": false,
+        "channel": "latest",
+        "vPrefixedTagName": true
+      }
+    ]
+  },
+  "keywords": [],
+  "author": "Raj Shekhar Singh",
+  "license": "ISC",
+  "devDependencies": {
+    "dotenv": "^16.4.5",
+    "electron": "^33.0.2",
+    "electron-builder": "^25.1.8",
+    "nodemon": "^3.1.7"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.679.0",
+    "aws-sdk": "^2.1691.0",
+    "axios": "^1.7.7",
+    "clean-css": "^5.3.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "crypto-js": "^4.2.0",
+    "ejs": "^3.1.10",
+    "electron-log": "^5.2.0",
+    "electron-reload": "^2.0.0-alpha.1",
+    "electron-updater": "^6.3.9",
+    "express": "^4.21.1",
+    "fs-extra": "^11.2.0",
+    "html-minifier": "^4.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "md5": "^2.3.0",
+    "mkdirp": "^3.0.1",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.11.3",
+    "nodemailer": "^6.9.15",
+    "short-uuid": "^5.2.0",
+    "uglify-js": "^3.19.3",
+    "uuid": "^11.0.2",
+    "xlsx": "^0.18.5"
+  }
+}

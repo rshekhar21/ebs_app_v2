@@ -1,0 +1,18 @@
+<?-include('./_inc/start.ejs') ?>
+    <div class="container-md p-2">
+        <div class="d-flex jcc aic">
+            <span class="h6 trade-name text-uppercase"><?=locals.trade ?></span>
+        </div>
+        <div class="search my-2">
+            <input type="search" id="search" class="form-control" placeholder="Search">
+        </div>
+        
+        <div class="max-vh-80 overflow-auto">
+            <div class="menu-list">
+                <ul class="list-group list-group-flush menu-list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/js/home.js"></script>
+<?-include('./_inc/close.ejs') ?>
