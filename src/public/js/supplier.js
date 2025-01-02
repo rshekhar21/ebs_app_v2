@@ -1,4 +1,4 @@
-import { advanceQuery, controlBtn, displayDatatable, doc, fetchTable, jq, log, pageHead, parseData, popListInline, searchData, setTable, storeId, xdb } from "./help.js";
+import { advanceQuery, controlBtn, displayDatatable, doc, fetchTable, jq, log, pageHead, parseData, popListInline, queryData, searchData, setTable, storeId, xdb } from "./help.js";
 import { createEditParty } from "./module.js";
 
 doc.addEventListener('DOMContentLoaded', function () {
@@ -15,11 +15,11 @@ doc.addEventListener('DOMContentLoaded', function () {
                 title: 'Hard Reset Data',
                 icon: '<i class="bi bi-arrow-clockwise"></i>',
                 cb: async () => {
-                    let rs = await advanceQuery({ key: 'supplier', limit: 150 }); 
-                    let data = rs.data; 
+                    let res = await queryData({ key: 'supplier', limit: 150 }); 
+                    if(!data.length) return;
                     let db = new xdb(storeId, 'supplier');
-                    db.clear
-                    await db.put(data);
+                    db.clear()
+                    await db.add(res);
                     loadData();
                 }
             }

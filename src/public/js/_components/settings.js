@@ -29,9 +29,9 @@ let settingsObj = {
     remote: { table: 'remoteSettings', name: 'remote', width: '60%', data: 'remote' },
     customsizes: { table: 'customsizes', name: 'customsizes', data: null },
     restrictions: { table: 'restrictions', name: 'restriction', width: '60%', data: null },
-    partyfields: { table: 'partyFields', name: 'partyfields', data: 'partyfields' },
+    partyFields: { table: 'partyFields', name: 'partyFields', data: 'partyFields' },
     discounts: { table: 'discounts', name: 'discounts', width: '60%', data: null },
-    pymtmethods: { table: 'pymt_method', name: 'pymtmethods', width: '60%', data: null },
+    pymtmethods: { table: 'pymt_method', name: 'pymtMethods', width: '60%', data: null },
 }
 
 export async function loadSettings() {
@@ -46,7 +46,7 @@ export async function loadSettings() {
             formWidth: s?.width,
             qryObj: null,
         };
-        let data = settings[s.name]; //log(data);
+        let data = settings[s.data]; //log(data);
 
         if (!s?.data) delete qry.data; //log(qry);
         const res = await getForm(qry); //log(res);
@@ -58,6 +58,7 @@ export async function loadSettings() {
         if (setting === 'restrictions') viewUserRestrictions(form);
         if (setting === 'discounts') loadDiscounts(settings);
         if (setting === 'pymtmethods') loadPymtmethods(settings);
+        if (setting === 'partyFields') laodPartyFields(form, settings);
 
     } catch (error) {
         log(error);
@@ -84,8 +85,9 @@ function saveSettings(e) {
             }
         })
         if (!proceed) return; //log(setting);
-        let data = fd2obj({ form }); 
+        let data = fd2obj({ form }); //log(data);
         let settings = getSettings(); //log(data, settings); return;
+
         if (setting == 'customsizes') {
             delete data.edit_group;
             addEditSizes(data, settings);
@@ -98,6 +100,8 @@ function saveSettings(e) {
             createDiscount(data, settings);
         } else if (setting === 'pymtmethods') {
             addPymtMode(data, settings);
+        } else if (setting === 'remote') {
+            remoteSettings(data, settings);
         } else {
             // general
             let updatedSettings = { [settingsObj[setting].name]: data }; //log(updatedSettings); return;
@@ -193,7 +197,7 @@ async function addPymtMode(data, settings) {
         updateSettings({ pymtMethods: [] });
         updateSettings({ pymtMethods: arr });
         let obj = { method: data.value, default_bank: data.default_bank }; //log(obj);
-        let res = await postData({ url: '/api/crud/create/pymtmethods', data: { data: obj } }); log(res.data);
+        let res = await postData({ url: '/api/crud/create/pymtmethods', data: { data: obj } }); //log(res.data);
         loadSettings();
     } catch (error) {
         log(error);
@@ -225,8 +229,8 @@ async function loadPymtmethods(settings) {
                 updateSettings({ pymtMethods: [] });
                 updateSettings({ pymtMethods: updatedPM });
                 loadSettings();
-                await postData({ url: '/api/crud/update/pymtmethods', data: { data } });      
-                
+                await postData({ url: '/api/crud/update/pymtmethods', data: { data } });
+
                 let [span] = jq('<span></span').addClass('d-flex jce aic gap-2').html(`<i class="bi bi-check2-circle"></i> Bank Changed Scucessfully!`).css('color', 'green');
                 jq('#view-settings').append(span);
                 setTimeout(() => { jq(span).remove(); }, 3000);
@@ -319,8 +323,8 @@ async function saveRestrictions(fd, id) {
 
 function addEditSizes(data, settings) {
     try {
-        let index = jq('#edit_group').val(); 
-        if (index) { 
+        let index = jq('#edit_group').val();
+        if (index) {
             const updatedSizes = settings.customSizes.map((size, i) => i == index ? { ...size, ...data } : size);
             updateSettings({ customSizes: [] });
             updateSettings({ customSizes: updatedSizes });
@@ -336,7 +340,7 @@ function addEditSizes(data, settings) {
 function customSizes(form, settings) {
     try {
         // load sizes
-        let sizes = settings?.customSizes||[]; //log(sizes);
+        let sizes = settings?.customSizes || []; //log(sizes);
         if (sizes.length) {
             let list = jq('<ul></ul>').addClass('list-group list-group-numbered mb-4');
             sizes.forEach((size, i) => {
@@ -401,6 +405,41 @@ function customSizes(form, settings) {
         let div = jq('<div></div>').addClass('d-flex jce aic').append(delAll);
         jq(form).find('div.group_name').parent('div').append(div);
 
+    } catch (error) {
+        log(error);
+    }
+}
+
+function laodPartyFields(form) {
+    try {
+        let arr = getAllIdsFromForm(form);
+        arr.forEach(id => {
+            jq(form).find(`#${id}`).change(function () {
+                let checked = jq(this).is(':checked');
+                checked ? this.value = id : this.value = '';
+            });
+        })
+
+    } catch (error) {
+        log(error);
+    }
+}
+
+function getAllIdsFromForm(form) {
+    let ids = [];
+    jq(form).find('[id]').each(function () {
+        ids.push(this.id);
+    });
+    return ids;
+}
+
+async function remoteSettings(data, settings) {
+    try {
+        let updatedSettings = { remote: data }; //log(updatedSettings);
+        updateSettings(updatedSettings);
+        data.id = 1;
+        let res = await postData({ url: '/api/crud/update/settings', data: { data } }); //log(res);
+        loadSettings();
     } catch (error) {
         log(error);
     }

@@ -35,7 +35,8 @@ SELECT
     u.`username` AS `biller`,
     o.`order_id`,
     o.`timestamp`,
-    o.`order_id`
+    o.`order_id`,
+    p.`email`
 FROM
     `orders` o
     LEFT JOIN `party` p ON o.`party` = p.`id`

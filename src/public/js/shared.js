@@ -2,7 +2,7 @@ import h, { doc, jq, log, parseLocal, parseNumber } from "./help.js";
 import { fetchBillDetails } from "./module.js";
 
 doc.addEventListener('DOMContentLoaded', async function () {
-  const orderid = h.getUrlParams().key; log(orderid); return;
+  const orderid = h.getUrlParams().key; //log(orderid); return;
   if (orderid) {
     let res = await loadData(orderid);
     if (res) {

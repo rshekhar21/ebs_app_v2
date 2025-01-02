@@ -1,6 +1,6 @@
 import { setupIndexDB } from './_localdb.js';
 import help, { jq, log, doc, fetchTable, parseNumber, pageHead, popListInline, displayDatatable, showCalender, advanceQuery, fd2json, sumArray, showModal, getForm, showTable, parseData, createTable, createEL, createStuff, xdb, storeId, getActiveEntity, encrypt, postData, showSuccess, getSettings } from './help.js';
-import { _addPartyPymt } from './module.js';
+import { _addPartyPymt, sendOrderEmail } from './module.js';
 
 doc.addEventListener('DOMContentLoaded', function () {
     pageHead({ title: 'orders', ph: 'Search Orders By ID, Date, Party, Year, FY' });
@@ -28,12 +28,13 @@ doc.addEventListener('DOMContentLoaded', function () {
                             ]
                         }
                     ];
+                    // log('ok'); return;
                     // setupIndexDB(config);
                     jq('div.process, div.ctrl-menu').toggleClass('d-none');
                     // jq('div.ctrl-menu').addClass('d-none');
                     let db = new xdb(storeId, 'orders');
                     advanceQuery({ key: 'orders' }).then(async (res) => {
-                        let data = res.data;
+                        let data = res.data; //log(data);
                         if (data?.length) {
                             await db.clear();
                             await db.put(data);
@@ -45,9 +46,9 @@ doc.addEventListener('DOMContentLoaded', function () {
         ]
     });
     // help.searchData({ key: 'srchordersbyparty', showData, loadData });
-    jq('#search').keyup(async function(){
+    jq('#search').keyup(async function () {
         let key = this.value;
-        if(key){
+        if (key) {
             let data = await db.getColumns({
                 key,
                 indexes: ['id', 'year', 'month', 'dated', 'party', 'biller', 'fin_year', 'party_name'],
@@ -57,7 +58,7 @@ doc.addEventListener('DOMContentLoaded', function () {
             });
             let tbl = createTable(data);
             showData(tbl);
-        }else{
+        } else {
             loadData();
         }
     }).on('search', loadData)
@@ -135,7 +136,9 @@ function setData(data) {
         jq(e).click(async function () {
             let id = this.textContent;
             let pymt = jq(e).closest('tr').find(`[data-key="pymt"]`).text(); //log(pymt);
-            let party = jq(e).closest('tr').find(`[data-key="party"]`).text(); //log(pymt);
+            // let party = jq(e).closest('tr').find(`[data-key="party"]`).text(); //log(pymt);
+            let email = jq(e).closest('tr').find(`[data-key="email"]`).text(); //log(email);
+            let party = jq(e).closest('tr').find(`[data-key="party_name"]`).text(); //log(party);
             let order_id = jq(e).closest('tr').find(`[data-key="order_id"]`).text(); //log(order_id);
 
             popListInline({
@@ -143,6 +146,7 @@ function setData(data) {
                     { key: 'View', id: 'viewOrder' },
                     { key: 'Share', id: 'shareDetails' },
                     { key: 'Print Order', id: 'savePdf' },
+                    { key: 'Email Order', id: 'emailOrder' },
                     { key: 'View Articles', id: 'viewItems' },
                     { key: 'Change Date', id: 'editDate' },
                     { key: 'Edit Inv-Number', id: 'editInv' },
@@ -170,7 +174,8 @@ function setData(data) {
             jq('#shareDetails').click(function () {
                 let { entity } = getSettings()
                 let key = `${entity.entity_id}-${order_id}`;
-                let url = `${window.location.origin}/order/?key=${key}`;
+                // let url = `${window.location.origin}/order/?key=${key}`; log(url); return;
+                let url = `https://api.ebsserver.in/order/?key=${key}`; //log(url); return;
                 // Encode the URL and message for WhatsApp
                 // Encrypt the key
                 let secretKey = 'your-secret-key'; // Use a strong key
@@ -179,7 +184,11 @@ function setData(data) {
                 let message = `View Order\n${url}`; //log(message); return;
                 let encodedMessage = encodeURIComponent(message);
                 let location = `https://api.whatsapp.com/send/?text=${encodedMessage}`;
+                // let location = `https://wa.me/+918800195189?text=${encodedMessage}`;
+                
                 window.open(location);
+                // https://api.ebsserver.in/order/?key=69NCEZrype2MawDEc8SbeW-1735373797903
+                // https://wa.me/+919910075648?text=https://api.ebsserver.in/order/?key=69NCEZrype2MawDEc8SbeW-1735373797903
             });
 
             jq('#editDate').click(function () {
@@ -341,9 +350,13 @@ function setData(data) {
                 }
             })
 
+            jq('#emailOrder').click(async function () {
+                sendOrderEmail(id);
+            })
         })
     })
-    jq(table).find(`[data-key="order_id"]`).addClass('d-none');
+
+    // jq(table).find(`[data-key="order_id"]`).addClass('d-none');
 
     jq(tbody).find(`[data-key="notes"]`).addClass('role-btn').each(function (i, e) {
         let title = this.textContent;
@@ -359,7 +372,7 @@ function setData(data) {
         alignRight: true,
         colsToShow: [`id`, `dated`, `party_name`, `party_id`, `order_type`, `inv_number`, `qty`, `subtotal`, `discount`, `tax`, `freight`, `total`, `previous_due`, `pymt`, `round_off`, `balance`, `fin_year`, `category`, `location`, `rewards`, `redeem`, `notes`, `biller`, `order_id`],
         colsToParse: ['subtotal', 'discount', 'tax', 'freight', 'total', 'pymt', 'adj', 'balance', 'qty', 'round', 'previous_due'],
-        colsToHide: ['round_off', 'order_id' ],
+        colsToHide: ['round_off', 'order_id'],
         hideBlanks: ['freight', 'round', 'category', 'location', 'rewards', 'redeem', 'previous_due'],
         colsToCenter: ['inv_number', 'qty', 'fin_year', 'notes'],
         colsToRename: [

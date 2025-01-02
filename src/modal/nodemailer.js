@@ -2,13 +2,17 @@ const nodemailer = require('nodemailer');
 
 var transporter = nodemailer.createTransport({
   service: 'gmail',
+  seture: true,
   auth: {
     user: 'service.myebs@gmail.com',//soruce email address
     pass: 'rzme qore imli wjsd' //password, use app-password created by gmail
+  },
+  tls: {
+      rejectUnauthorized: false
   }
 });
 
-const mailOptions = {
+const mailOptions_test = {
   from: '"EBS"<service.myebs@gmail.com>',
   to: 'rshekhar21@gmail.com',
   subject: 'Test Email',

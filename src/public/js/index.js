@@ -2,8 +2,18 @@ import help, { jq, log, doc, formDataToJson, postData, fd2json, isEmail } from '
 
 doc.addEventListener('DOMContentLoaded', function () {
     // jq('body').addClass('gred-blue')
+    window.onReCaptchaVerified = onReCaptchaVerified;
+
     let year = new Date().getFullYear();
     jq('span.copyright').text(`Copyright ${year}, All Rights Reserved`);
+
+    setInterval(() => {
+        jq('div.clock').text(moment().format('h:mm'));
+        jq('div.date').text(moment().format('D MMMM'));
+        jq('div.day').text(moment().format('dddd'));
+    }, 1000);
+
+    
 
     jq('p.forgot-pwd, span.back').click(function () {
         jq('#login-form, #reset-pwd').toggleClass('d-none');
@@ -15,9 +25,9 @@ doc.addEventListener('DOMContentLoaded', function () {
     })
 
     jq('#acnt-email').blur(function () {
-        if (isEmail(this.value)) { 
-            jq('span.send-reset-code').removeClass('text-secondary').addClass('role-btn text-primary'); 
-        }else{
+        if (isEmail(this.value)) {
+            jq('span.send-reset-code').removeClass('text-secondary').addClass('role-btn text-primary');
+        } else {
             jq('span.send-reset-code').removeClass('role-btn text-primary').addClass('text-secondary');
         }
     })
@@ -48,15 +58,15 @@ doc.addEventListener('DOMContentLoaded', function () {
     })
 
     jq('#login-form').submit(async function (e) {
+        e.preventDefault();
         try {
             e.preventDefault();
-            let data = formDataToJson({ form: this }); //log(data);
-            let res = await postData({ url: '/login', data }); //log(res); return;
+            let data = formDataToJson({ form: this });
+            let res = await postData({ url: '/login', data });
             if (res.data.status == 'error') {
                 throw res.data.message
             } else {
                 window.location.href = '/apps'
-                // if (res.data) { window.location.href = '/apps' } else { jq('div.error').removeClass('d-none') }
             }
         } catch (error) {
             log(error);
@@ -87,32 +97,28 @@ doc.addEventListener('DOMContentLoaded', function () {
         }
     })
 
-
-    const newVersionDiv = document.querySelector('.new-version');
-    const downloadButton = document.querySelector('.download');
-    const downloadProgress = document.querySelector('.progress');
-
-    // Show the update available notification
-    window.app.onUpdateAvailable(() => {
-        newVersionDiv.classList.remove('d-none');
-    });
-
-    // Handle download button click
-    downloadButton.addEventListener('click', () => {
-        window.app.requestDownload();
-        downloadProgress.classList.remove('d-none')
-        // newVersionDiv.innerHTML = '<span>Downloading Update: <progress id="progressBar" max="100" value="0"></progress> <span id="progressText">0%</span></span>';
-    });
-
-    // Update progress bar
-    window.app.onDownloadProgress((percent) => {
-        document.getElementById('progressBar').style.width = `${Math.round(percent)}%`;
-        document.getElementById('progressBar').textContent = `${Math.round(percent)}%`;
-    });
-
-    // Prompt user to install after download
-    window.app.onUpdateDownloaded(() => {
-        window.app.requestInstall();
-    });
-
 })
+
+async function onReCaptchaVerified(token) {
+    try {
+        // Get the form data
+        let form = jq('#login-form')[0];
+        let data = formDataToJson({ form });
+
+        // Attach the reCAPTCHA token to the data
+        data['g-recaptcha-response'] = token;
+
+        // Send the data to the server
+        let res = await postData({ url: '/login', data });
+        if (res.data.status === 'error') {
+            throw res.data.message;
+        } else {
+            // Redirect on success
+            window.location.href = '/apps';
+        }
+    } catch (error) {
+        // Display errors
+        log(error);
+        jq('div.error').removeClass('d-none').text(error);
+    }
+}

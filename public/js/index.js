@@ -1,8 +1,17 @@
-document.addEventListener('DOMContentLoaded', () => {
-    let year = new Date().getFullYear();
-    document.querySelector('.copyright').innerHTML = `Copyright ${year}, All Rights Reserved`;
-    updateApplication();
+import { jq, log } from "./bundel.js";
 
+
+document.addEventListener('DOMContentLoaded', function(){
+    let year = new Date().getFullYear();
+    // document.querySelector('.copyright').innerHTML = `Copyright ${year}, All Rights Reserved`;
+    // updateApplication();
+    console.log('ok');  
+
+    jq('button.start').click(function(){
+        log('ok');
+    })
+
+    
 })
 
 function updateApplication() {

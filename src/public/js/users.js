@@ -1,4 +1,4 @@
-import help, { advanceQuery, controlBtn, createEL, displayDatatable, doc, fd2json, fetchTable, getForm, jq, log, pageHead, popListInline, setTable, showModal } from "./help.js";
+import help, { advanceQuery, controlBtn, createEL, cuser, displayDatatable, doc, errorMsg, fd2json, fetchTable, getCookie, getForm, isAdmin, isRrestricted, jq, log, pageHead, popListInline, setTable, showModal } from "./help.js";
 
 doc.addEventListener('DOMContentLoaded', function () {
     pageHead({ title: 'USERS', viewSearch: false, spinner: false });
@@ -6,7 +6,8 @@ doc.addEventListener('DOMContentLoaded', function () {
         buttons: [
             {
                 title: 'Add New User',
-                cb: () => {
+                cb: async () => {
+                    if (await isRrestricted('CrOdiKbL')) return;
                     help.createStuff({
                         title: 'Add User',
                         modalSize: 'modal-md',
@@ -28,6 +29,7 @@ async function loadData() {
         jq(res.tbody).find(`[data-key="id"]`).each(function () {
             jq(this).addClass('role-btn text-primary').click(function () {
                 let id = this.textContent;
+                let username = jq(this).closest('tr').find(`[data-key="username"]`).text();
                 popListInline({
                     el: this, li: [
                         { key: 'Edit', id: 'editUser' },
@@ -37,9 +39,10 @@ async function loadData() {
                         { key: 'Cancel' }
                     ]
                 });
-                if(id==1) jq('#delUser').addClass('disabled');
+                if (id == 1) jq('#delUser').addClass('disabled');
                 jq('#editUser').click(async function () {
                     try {
+                        if (!await isAdmin()) { if (cuser !== username) { errorMsg('Unauthorized Action!'); return } }
                         const mb = help.showModal({ title: 'Edit User', applyButtonText: 'Update' }).modal;
                         const { form } = await help.getForm({ table: 'editUsers', qryobj: { key: 'editUser', values: [id] } });
                         jq(mb).find('div.modal-body').html(form);
@@ -53,7 +56,8 @@ async function loadData() {
 
                 jq('#editRestictions').click(async function () {
                     try {
-                        let res = await advanceQuery({ key: 'userRestrictions', values: [id] }); //log(res);
+                        if (await isRrestricted('CrOdiKbL')) return;
+                        let res = await advanceQuery({ key: 'userRestrictions', values: [id] });
                         if (!res.data.length) return;
                         let obj = res.data[0];  //log(obj);
                         let rest_id = obj.id;
@@ -119,30 +123,32 @@ async function loadData() {
 
                 jq('#delUser').click(async function () {
                     try {
-                        if(id==1){
+                        if (id == 1) {
                             alert('This User Cannot be Deleted!');
                             return;
                         }
+                        if (await isRrestricted('CrOdiKbL')) return;
                         let cnf = confirm('Are you sure want to delete this user');
-                        if(!cnf) return;
-                        await advanceQuery({ key: 'delUser', values: [id]});  
+                        if (!cnf) return;
+                        await advanceQuery({ key: 'delUser', values: [id] });
                         loadData();
                     } catch (error) {
                         log(error);
                     }
                 })
 
-                jq('#resetPwd').click(async function(){
+                jq('#resetPwd').click(async function () {
                     try {
-                        let mb = showModal({ title: 'Reset Password', modalSize: 'modal-md', applyButtonText: 'Reset'}).modal;
+                        if (!await isAdmin()) { if (cuser !== username) { errorMsg('Unauthorized Action!'); return } }
+                        let mb = showModal({ title: 'Reset Password', modalSize: 'modal-md', applyButtonText: 'Reset' }).modal;
                         let { form } = await getForm({ table: 'resetUserPwd' });
                         jq(mb).find('div.modal-body').html(form);
-                        jq(mb).find('button.apply').click(async function(){
+                        jq(mb).find('button.apply').click(async function () {
                             try {
                                 let data = fd2json({ form }); log(data);
-                                if(!data.password) throw 'Missing Password';
-                                if(data.password.length <6) throw 'Password must be 6 charactors long!';
-                                let res = await advanceQuery({ key: 'updateUserPwd', values: [id]}); //log(res);
+                                if (!data.password) throw 'Missing Password';
+                                if (data.password.length < 6) throw 'Password must be 6 charactors long!';
+                                let res = await advanceQuery({ key: 'updateUserPwd', values: [id] }); //log(res);
                                 if (res.data?.affectedRows) {
                                     jq(mb).find('span.success').removeClass('d-none');
                                     jq(mb).find('span.fail, div.p-status').addClass('d-none');
@@ -153,12 +159,12 @@ async function loadData() {
                                 jq(mb).find('span.success, div.p-status').addClass('d-none');
                                 jq(mb).find('span.fail').removeClass('d-none');
                                 jq(mb).find('div.error-msg').removeClass('d-none').text(error);
-                                log(error);  
+                                log(error);
                             }
                         })
                         new bootstrap.Modal(mb).show();
                     } catch (error) {
-                        log(error);   
+                        log(error);
                     }
                 })
             });

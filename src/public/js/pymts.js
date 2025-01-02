@@ -1,4 +1,4 @@
-import help, { advanceQuery, displayDatatable, doc, jq, log, pageHead, parseData, searchData, storeId, xdb } from "./help.js";
+import help, { advanceQuery, displayDatatable, doc, jq, log, pageHead, parseData, queryData, searchData, storeId, xdb } from "./help.js";
 import { deletePayment, editPayment, listofBanks } from "./module.js";
 
 doc.addEventListener('DOMContentLoaded', function () {
@@ -35,10 +35,11 @@ doc.addEventListener('DOMContentLoaded', function () {
                 icon: '<i class="bi bi-arrow-clockwise"></i>',
                 cb: async () => {
                     try {
-                        let res = await advanceQuery({ key: 'payments' });
+                        let res = await queryData({ key: 'payments' });
+                        if (!res.length) return;
                         let db = new xdb(storeId, 'payments');
                         db.clear();
-                        await db.add(res.data);
+                        await db.add(res);
                         loadData();
                     } catch (error) {
                         log(error);
@@ -55,7 +56,7 @@ async function loadData() {
     try {
         let db = new xdb(storeId, 'payments');
         let data = await db.getColumns({
-            columns: ['id', 'dated', 'party_name', 'party', 'amount', 'cash', 'bank', 'other', 'forefiet', 'bank_name', 'bank_mode',  'payment_method', 'order_id', 'purch_id', 'notes' ],
+            columns: ['id', 'dated', 'party_name', 'party', 'amount', 'cash', 'bank', 'other', 'forefiet', 'bank_name', 'bank_mode', 'payment_method', 'order_id', 'purch_id', 'notes'],
             rename: { 'bank_name': 'account', 'payment_method': 'pymt_method', 'amount': 'payment', 'bank_mode': 'mode' },
             sortby: 'id',
             sortOrder: 'desc',

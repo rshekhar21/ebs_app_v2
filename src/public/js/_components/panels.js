@@ -1,7 +1,7 @@
-import help, { advanceQuery, createEL, createNewPage, createStuff, createTable, doc, fd2obj, fetchTable, generateUniqueAlphaCode, getFinYear, getForm, getSettings, getSqlDate, jq, log, parseColumn, parseCurrency, parseData, parseNumber, popListInline, postData, queryData, setTable, showCalender, showErrors, showModal, showTable, storeId, xdb } from "../help.js";
+import help, { advanceQuery, createEL, createNewPage, createStuff, createTable, doc, errorMsg, fd2obj, fetchTable, generateUniqueAlphaCode, getFinYear, getForm, getSettings, getSqlDate, isAdmin, isRrestricted, jq, log, parseColumn, parseCurrency, parseData, parseNumber, popListInline, postData, queryData, setTable, showCalender, showErrors, showModal, showTable, storeId, xdb } from "../help.js";
 import { loadSettings } from "./settings.js";
 import { icons } from "../svgs.js";
-import { _addPartyPymt, _delStock, _loadSrchstock, createStock, editParty, numerifyObject, purchEntry, setEditStockBody } from "../module.js";
+import { _addPartyPymt, _delStock, _loadSrchstock, createStock, editParty, numerifyObject, purchEntry, sendOrderEmail, setEditStockBody } from "../module.js";
 import { getOrderData, hardresetData, loadOrderDetails, loadPartyDetails, quickData, refreshOrder, resetOrder, setItems, showOrderDetails, updateDetails } from "../order.config.js";
 import { setupIndexDB } from "../_localdb.js";
 
@@ -12,12 +12,14 @@ import { setupIndexDB } from "../_localdb.js";
 export function leftPanel() {
     try {
         let topMenu = [
+            // home
             {
-                id: 'home', name: "Home", title: 'Home Page', icon: icons.home, href: '/apps/app', class: 'menu-item',
+                id: 'home', rc: '', name: "Home", title: 'Home Page', icon: icons.home, href: '/apps/app', class: 'menu-item',
                 action: () => location.href = '/apps/app'
             },
+            // create order
             {
-                id: 'order', name: "Order", title: 'Create New Order', icon: icons.plus, href: '', class: 'menu-item order-item',
+                id: 'order', rc: '', name: "Order", title: 'Create New Order', icon: icons.plus, href: '', class: 'menu-item order-item',
                 action: () => {
                     // history.pushState({}, null, '/apps/app/orders/create');
                     const { pin_purch = null } = getOrderData(); //log(pin_purch);
@@ -25,24 +27,27 @@ export function leftPanel() {
                     jq('#new-order').removeClass('d-none');
                 }
             },
+            // view orders
             {
-                id: 'vieworder', name: "View Orders", title: 'View Orders', icon: icons.view_orders, href: '', class: 'menu-item',
+                id: 'vieworder', rc: 'PgBXvEqD', name: "View Orders", title: 'View Orders', icon: icons.view_orders, href: '', class: 'menu-item',
                 action: () => {
                     const { pin_purch = null } = getOrderData();
                     if (pin_purch) return;
                     _viewOrders();
                 }
             },
+            // closing
             {
-                id: 'closing', name: 'Closing', title: 'View Closing', icon: icons.closing, href: '', class: 'menu-item',
+                id: 'closing', rc: 'jDzNlYbp', name: 'Closing', title: 'View Closing', icon: icons.closing, href: '', class: 'menu-item',
                 action: async () => {
                     const { pin_purch = null } = getOrderData();
                     if (pin_purch) return;
                     _viewClosing()
                 }
             },
+            // partys
             {
-                id: 'party', name: "Customers", title: 'View Customers', icon: icons.partys, href: '', class: 'menu-item',
+                id: 'party', rc: '', name: "Customers", title: 'View Customers', icon: icons.partys, href: '', class: 'menu-item',
                 action: () => {
                     const { pin_purch = null } = getOrderData();
                     if (pin_purch) return;
@@ -81,16 +86,19 @@ export function leftPanel() {
             //     id: 'employee', name: "Employee", title: 'Create Employee', icon: icons.employee2, href: '',
             //     action: () => createStuff({ title: 'Add Employee', table: 'employee', url: '/api/crud/create/employee' })
             // },
+            // create expense
             {
-                id: 'expense', name: "Expense", title: 'Create Expense', icon: icons.dollar2, href: '',
+                id: 'expense', rc: '', name: "Expense", title: 'Create Expense', icon: icons.dollar2, href: '',
                 action: () => createStuff({ title: 'Add Expnse', table: 'expense', url: '/api/crud/create/expense' })
             },
+            // create stock
             {
-                id: 'stock', name: "Stock", title: 'Create New Stock', icon: icons.stock, href: '',
+                id: 'stock', rc: '', name: "Stock", title: 'Create New Stock', icon: icons.stock, href: '',
                 action: () => createStock({})
             },
+            // view stock
             {
-                id: 'inventory', name: "View Stock", title: 'View Stock', icon: icons.stock_1, href: '', class: 'menu-item',
+                id: 'inventory', rc: '', name: "View Stock", title: 'View Stock', icon: icons.stock_1, href: '', class: 'menu-item',
                 // action: () => location.href = '/apps/app/stock',
                 action: () => {
                     const { pin_purch = null } = getOrderData();
@@ -98,24 +106,27 @@ export function leftPanel() {
                     _viewStock();
                 }
             },
+            // view purchaes
             {
-                id: 'viewpurch', name: "View Purchase", title: 'View Purchase', icon: icons.inventory, href: '', class: 'menu-item',
+                id: 'viewpurch', rc: 'WnkzKJLc', name: "View Purchase", title: 'View Purchase', icon: icons.inventory, href: '', class: 'menu-item',
                 action: () => {
                     const { pin_purch = null } = getOrderData();
                     if (pin_purch) return;
                     _viewPurch();
                 },
             },
+            // create purchase
             {
-                id: 'purchase', name: "Purchase Entry", title: 'Purchase Stock', icon: icons.purchase, href: '', class: '', hide: true,
+                id: 'purchase', rc: 'FROKLrJs', name: "Purchase Entry", title: 'Purchase Stock', icon: icons.purchase, href: '', class: '', hide: true,
                 action: () => {
                     const { pin_purch = null } = getOrderData();
                     if (pin_purch) return;
                     purchEntry()
                 },
             },
+            // create purchase
             {
-                id: 'purchase', name: "Purchase", title: 'Create New Purchase', icon: icons.cart, href: '', class: 'menu-item purch-item',
+                id: 'purchase', rc: 'FROKLrJs', name: "Purchase", title: 'Create New Purchase', icon: icons.cart, href: '', class: 'menu-item purch-item',
                 action: () => {
                     // history.pushState({}, null, '/apps/app/orders/create/purchase');
                     jq('#purchase-order').removeClass('d-none');
@@ -125,7 +136,7 @@ export function leftPanel() {
                 }
             },
             {
-                id: 'monthlyhsales', name: "Monthly Sales", title: 'View Montyly Sales!', icon: icons.salesdata, href: '', class: 'menu-item',
+                id: 'monthlyhsales', rc: 'klidFVCa', name: "Monthly Sales", title: 'View Montyly Sales!', icon: icons.salesdata, href: '', class: 'menu-item',
                 action: () => {
                     const { pin_purch = null } = getOrderData();
                     if (pin_purch) return;
@@ -176,7 +187,8 @@ export function leftPanel() {
             // let obj = {key: menu.name, id: divId };
             // let arr = [];
             // arr.push(obj);
-            jq(div).click(function () {
+            jq(div).click(async function () {
+                if (menu.rc) { if (await isRrestricted(menu.rc)) return }
                 const { pin_purch = null } = getOrderData();
                 if (pin_purch) { return; }
                 if (jq(this).hasClass('menu-item')) {
@@ -233,10 +245,18 @@ export function leftPanel() {
             // { id: 'calc', name: 'Calculaotr', title: 'Calculator', icon: icons.calc, class: '', action: () => { jq('div.calculator').toggleClass('d-none'); jq('#equation').focus(); } },
             // { id: 'show_charts', name: 'View Charts', title: 'Sales Charts', icon: icons.charts, class: '', action: () => { jq('#charts').toggleClass('d-none'); loadSettings(); } },
 
-            { id: 'app_settings', name: 'Settings', title: 'Application Settings', icon: icons.settings, class: '', action: () => { jq('#settings').toggleClass('d-none'); loadSettings(); } },
+            {
+                id: 'app_settings', admin: true, name: 'Settings', title: 'Application Settings', icon: icons.settings, class: '',
+                action: async (m) => {
+                    if (m.admin) { if (!await isAdmin()) { errorMsg('Restricted Access!'); return }; }
+                    jq('#settings').toggleClass('d-none');
+                    loadSettings();
+                }
+            },
 
             {
-                id: 'logout', name: 'Logout', title: 'Log Out Application', icon: icons.logout, class: '', action: () => {
+                id: 'logout', admin: false, name: 'Logout', title: 'Log Out Application', icon: icons.logout, class: '',
+                action: async () => {
                     hardresetData();
                     window.location.href = '/logout'
                 }
@@ -244,13 +264,13 @@ export function leftPanel() {
 
         ];
 
-        bottomMenu.forEach(menu => {
+        bottomMenu.forEach(async menu => {
             let div = createEL('div');
             div.title = menu.title;
             let span = createEL('span');
             jq(span).addClass('d-none d-xl-flex ms-3').text(menu.name);
             $(div).addClass(`d-xl-flex jcs text-center aic p-1 role-btn fw-300 ${menu.id} ${menu?.class || ''} `).append(menu.icon, span);
-            jq(div).click(menu.action).hover(function () { jq(this).toggleClass('bg-hover rounded-end') })
+            jq(div).click(function () { menu.action(menu) }).hover(function () { jq(this).toggleClass('bg-hover rounded-end') })
             jq('div.bottom-side').append(div);
         })
 
@@ -591,6 +611,7 @@ async function _viewPurch() {
 
                     jq('#editPOrder').click(async function () {
                         try {
+                            if (await isRrestricted('tfjlDGeL')) return;
                             let [x, y, z] = await Promise.all([
                                 await advanceQuery({ key: 'editPurch', values: [id] }),
                                 await advanceQuery({ key: 'purchasedStock', values: [id] }),
@@ -616,6 +637,7 @@ async function _viewPurch() {
                     })
 
                     jq('#deletePOrder').click(async function () {
+                        if (await isRrestricted('eVyiaFnt')) return;
                         let cnf = confirm('Are you sure want to delete this Purchaes?'); //log(cnf);
                         if (cnf) {
                             await advanceQuery({ key: 'delPurch', values: [id] });
@@ -787,7 +809,7 @@ async function _viewOrders() {
                 // colsToShow: [`id`, `dated`, `party_name`, `inv_number`, `order_type`, `category`, `location`, `qty`, `subtotal`, `discount`, `tax`, `freight`, `round_off`, `total`, `pymt`, `balance`, `notes`, `order_id`],
                 alignRight: true,
                 colsToParse: ['subtotal', 'qty', 'discount', 'tax', 'freight', 'total', 'pymt', 'balance', 'round_off'],
-                colsToHide: ['order_date', 'party', 'party_id', 'adjustment', 'disc_id', 'disc_percent', 'ship_id', 'tax_type', 'gst_type', 'month', 'year', 'timestamp', 'order_id'],
+                colsToHide: ['order_date', 'party', 'party_id', 'adjustment', 'disc_id', 'disc_percent', 'ship_id', 'tax_type', 'gst_type', 'month', 'year', 'timestamp', 'order_id', 'email'],
                 hideBlanks: ['category', 'location', 'freight', 'round_off', 'notes', 'tax', 'disc', 'manual_tax', 'balance', 'rewards', 'redeem', 'previous_due'],
                 colsToCenter: ['inv_num', 'qty', 'notes'],
                 colsToRename: [
@@ -809,10 +831,14 @@ async function _viewOrders() {
                 }
             })
 
+            jq(tbl).find(`[data-key="email"]`).addClass('d-none');
+
             jq(tbl.tbody).find(`[data-key="id"]`).addClass('text-primary role-btn').each(function (i, e) {
                 jq(e).click(function () {
                     let id = this.textContent;
                     let date = jq(this).closest('tr').find(`[data-key="order_date"]`).text();
+                    let email = jq(e).closest('tr').find(`[data-key="email"]`).text();
+                    let party = jq(e).closest('tr').find(`[data-key="party_name"]`).text();
                     let order_id = jq(this).closest('tr').find(`[data-key="order_id"]`).text();
 
                     popListInline({
@@ -820,6 +846,7 @@ async function _viewOrders() {
                             { key: 'View', id: 'viewOrder' },
                             { key: 'Share', id: 'shareDetails' },
                             { key: 'Print Order', id: 'viewPrint' },
+                            { key: 'Email Order', id: 'emailOrder' },
                             { key: 'View Articles', id: 'viewItems' },
                             { key: 'Add Payment', id: 'addPymts' },
                             { key: 'View Payments', id: 'viewPymts' },
@@ -854,6 +881,7 @@ async function _viewOrders() {
                     })
 
                     jq('#editOrder').click(async function () {
+                        if (await isRrestricted('fiSvlNab')) return;
                         let db = new xdb(storeId);
                         let [data] = await db.getColumns({
                             table: 'orders',
@@ -902,6 +930,7 @@ async function _viewOrders() {
 
                     jq('#delOrder').click(async function () {
                         try {
+                            if (await isRrestricted('jFxGDeft')) return;
                             let cnf = confirm('Are you sure want to delete this order?');
                             if (!cnf) return;
                             let db = new xdb(storeId);
@@ -950,13 +979,14 @@ async function _viewOrders() {
 
                     jq('#refetch').click(async function () {
                         let { entity_id: folder } = getSettings().entity;
-                        let res = await postData({ url: '/aws/upload', data: { folder, orderid: id } }); //log(res);
+                        let res = await postData({ url: '/aws/upload', data: { folder, orderid: id } });
                     })
 
                     jq('#shareDetails').click(function () {
                         let { entity } = getSettings()
                         let key = `${entity.entity_id}-${order_id}`;
-                        let url = `${window.location.origin}/order/?key=${key}`;
+                        // let url = `${window.location.origin}/order/?key=${key}`;
+                        let url = `https://api.ebsserver.in/order/?key=${key}`;
                         let message = `View Order\n${url}`;
                         let encodedMessage = encodeURIComponent(message);
                         let location = `https://api.whatsapp.com/send/?text=${encodedMessage}`;
@@ -965,6 +995,7 @@ async function _viewOrders() {
 
                     jq('#exportJson').click(async function () {
                         try {
+                            if (await isRrestricted('fiSvlNab')) return;
                             let db = new xdb(storeId);
                             let items = await db.getColumns({
                                 table: 'sold',
@@ -990,8 +1021,9 @@ async function _viewOrders() {
                         }
                     })
 
-                    jq('#editDate').click(function () {
+                    jq('#editDate').click(async function () {
                         try {
+                            if (await isRrestricted('ybaUOclE')) return;
                             let cal = showCalender().modal;
                             jq(cal).modal('show');
                             jq(cal).on('shown.bs.modal', function () {
@@ -1013,8 +1045,9 @@ async function _viewOrders() {
                         }
                     });
 
-                    jq('#editInv').click(function () {
+                    jq('#editInv').click(async function () {
                         try {
+                            if (await isRrestricted('fiSvlNab')) return;
                             createStuff({
                                 title: 'Edit Inv Number',
                                 table: 'editInvNo',
@@ -1033,8 +1066,9 @@ async function _viewOrders() {
                         }
                     });
 
-                    jq('#addParty').click(function () {
+                    jq('#addParty').click(async function () {
                         try {
+                            if (await isRrestricted('fiSvlNab')) return;
                             createStuff({
                                 title: 'Add / Edit Party',
                                 table: 'addeditparty',
@@ -1056,6 +1090,10 @@ async function _viewOrders() {
                     jq('#addPymts').click(async function () {
                         _addPartyPymt(id, loadData);
                     });
+
+                    jq('#emailOrder').click(async function () {
+                        sendOrderEmail(id);
+                    })
                 });
             })
 
@@ -1163,7 +1201,8 @@ async function _viewPartys() {
                         ]
                     });
 
-                    jq('#editParty').click(function () {
+                    jq('#editParty').click(async function () {
+                        if (await isRrestricted('PUgTVuft')) return;
                         editParty(id, false,
                             async () => {
                                 let [party] = await queryData({ key: 'getpartyByid', values: [id] }); //log(party);
@@ -1175,6 +1214,7 @@ async function _viewPartys() {
                     })
 
                     jq('#delParty').click(async function () {
+                        if (await isRrestricted('PUgTVuft')) return;
                         let [x] = await db.get(id); log(x);
                         if (x.billing || x.payments) {
                             showErrors('Customers with No Billing/Payments can be Deleted!');

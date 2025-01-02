@@ -4,7 +4,7 @@ import { fetchOrderData } from './module.js';
 doc.addEventListener('DOMContentLoaded', function () {
     const { orderid } = getUrlParams();
     fetchOrder(orderid);
-    document.title = orderid;
+    document.title = 'Invoice';
 
     jq('span.print').click(() => window.print());
     jq('span.close').click(() => window.close());
@@ -39,20 +39,25 @@ async function fetchOrder(orderid) {
         if (!entity?.entity_name) throw 'Unable to Fetch Order, Please Try Again!';
 
         let res = await fetchOrderData({ folder: entity.entity_id, orderid });
-        let { orderData: [od], itemsData: items, gsData: [gs], grData: [gr] } = res; log(od);
+        let { orderData: [od], itemsData: items, gsData: [gs], grData: [gr] } = res; //log(od);
 
         // entity
         jq('#entity .entity-name').text(entity.entity_name);
 
         let ent = `
             <span class="mb-1 fst-italic">${entity.tag_line || ''}</span>
-            <span class="${entity.address ? '' : 'd-none'}">${entity.address}</span>
+            <span class="${entity.address ? '' : 'd-none'}">${entity.address}</span>            
             <div class="d-flex jcc aic gap-2">
                 <span class="${entity.city ? '' : 'd-none'}">${entity.city}</span>
                 <span class="${entity.state ? '' : 'd-none'}">${entity.state}</span>
                 <span class="${entity.pincode ? '' : 'd-none'}">${entity.pincode}</span>
             </div>
-            <div class="d-flex jcc aic gap-2 mt-2 font-monospace ${entity.gst_num ? '' : 'd-none'}"  style="font-size: 1rem; letter-spacing: 1px;">
+            <span class="${entity.contact ? '' : 'd-none'}">${entity.contact}</span>
+            <div class="d-flex jcc aic gap-2">
+                <span class="${entity.email ? '' : 'd-none'}">${entity.email}</span>
+                <span class="${entity.website ? '' : 'd-none'}">${entity.website}</span>
+            </div>
+            <div class="d-flex jcc aic gap-2 mt-1 font-monospace ${entity.gst_num ? '' : 'd-none'}"  style="font-size: 1rem; letter-spacing: 1px;">
                 <span class="fw-500">GST Number:</span>
                 <span class="fw-bold">${entity.gst_num}</span>
             </div>`;

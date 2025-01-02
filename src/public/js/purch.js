@@ -1,5 +1,5 @@
 import { setupIndexDB } from './_localdb.js';
-import help, { jq, log, doc, fetchTable, pageHead, displayDatatable, searchData, parseData, createStuff, parseNumber, popListInline, advanceQuery, storeId, xdb, queryData } from './help.js';
+import help, { jq, log, doc, fetchTable, pageHead, displayDatatable, searchData, parseData, createStuff, parseNumber, popListInline, advanceQuery, storeId, xdb, queryData, isRrestricted } from './help.js';
 import { getOrderData, quickData, updateDetails } from './order.config.js';
 
 doc.addEventListener('DOMContentLoaded', function () {
@@ -9,8 +9,9 @@ doc.addEventListener('DOMContentLoaded', function () {
         buttons: [
             {
                 title: 'New Entry',
-                cb: () => {
-                    log('ok');
+                cb: async () => {
+                    if (await isRrestricted('FROKLrJs')) return;
+                    window.location.href = '/apps/app/orders/create'
                 }
             },
             {
@@ -28,13 +29,12 @@ doc.addEventListener('DOMContentLoaded', function () {
                             ]
                         }
                     ];
-                    setupIndexDB(store, storeId);
-                    queryData({ key: 'purchOrders' }).then(data => {
-                        let db = new xdb(storeId, 'purchase');
-                        db.clear();
-                        db.put(data);
-                        loadData();
-                    });
+                    // setupIndexDB(store, storeId);                   
+                    let res = queryData({ key: 'purchOrders' });
+                    if (!res.length) return;
+                    db.clear();
+                    await db.add(data);
+                    loadData();
 
                 }
             }

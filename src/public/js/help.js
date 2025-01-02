@@ -5,6 +5,7 @@ import 'https://cdn.jsdelivr.net/npm/chart.js';
 
 import sqlfields from './sqlfields.js';
 import IndexedDB from './indexdb.modified.js';
+import temp from './temps.js';
 
 const help = {};
 export default help;
@@ -19,6 +20,8 @@ export const back = () => { window.history.back() }
 export const path = window.location.pathname;
 export const trade_name = getCookie('app_name');
 export const user_id = getCookie('user_id'); //log(user_id);
+export const cuser = getCookie('username');
+export const store_id = getCookie('store_id'); log(store_id)
 export const roundOff = num => Math.round((num + Number.EPSILON) * 100) / 100;
 help.roundOff = num => Math.round((num + Number.EPSILON) * 100) / 100;
 // import modules, { fetchOrderData } from './module.js';
@@ -39,7 +42,7 @@ export function getSettings() { return Storage.get(storeId) || {} }
 
 export function updateSettings(newSettigns) {
     try {
-        const store_id = Cookie.get('store_id');
+        // const store_id = Cookie.get('store_id');
         const storedSettings = Storage.get(store_id);
         const updateSettings = {
             ...storedSettings,
@@ -750,8 +753,9 @@ export function popListInline({ el, li }) {
 }
 help.popListInline = popListInline;
 
-export async function getForm({ table = '', data = null, type = 'create', qryobj = null, id = true, idName = null, hideFields = [], formWidth = null }) {
+export async function getForm({ table = null, data = null, type = 'create', qryobj = null, id = true, idName = null, hideFields = [], formWidth = null }) {
     try {
+        if(!table) return {};
         let res = null, input = null, textarea = null, obj = {};
         if (qryobj) {
             res = await advanceQuery(qryobj); //log(res);
@@ -767,9 +771,9 @@ export async function getForm({ table = '', data = null, type = 'create', qryobj
         }
         let i = 0
 
-        const objForm = { ...sqlfields[table] };
-        if (hideFields.length) { hideFields.forEach(field => delete objForm[field]) };
-        const fields = Object.entries(objForm);
+        const formObj = { ...sqlfields[table] }; //log(formObj);
+        if (hideFields.length) { hideFields.forEach(field => delete formObj[field]) };
+        const fields = Object.entries(formObj);
         let hCnt = 0; //hidden counter
         for (let [k, v] of fields) { if (v.type === 'hidden') { hCnt++ } }
         let fCnt = fields.length; fCnt = fCnt - hCnt; fCnt % 2 ? fCnt : fCnt + 1
@@ -797,8 +801,7 @@ export async function getForm({ table = '', data = null, type = 'create', qryobj
             }
             let inputValue = data ? data[key] : value.default ? value.default : ''; //log(inputValue);
 
-            if (value?.hidden) { jq(inputDiv.addClass('d-none')); }
-
+            if (value?.hidden) { jq(inputDiv).addClass('d-none'); }
 
             if (value.type === 'textarea') {
                 input = createEL('textarea');
@@ -980,7 +983,7 @@ export async function getForm({ table = '', data = null, type = 'create', qryobj
             jq(invalid).addClass('invalid d-none text-danger');
             div.append(invalid);
             inputDiv.classList.add(key);
-            if (value.hidden) inputDiv.classList.add('d-none');
+            if (value?.hidden) inputDiv.classList.add('d-none');
             inputDiv.append(div);
 
             if (fCnt > 6) {
@@ -1142,7 +1145,7 @@ export async function createStuff({ title = 'Title', modalSize = 'modal-lg', but
 
                     jq(this).addClass('disabled');
                     jq('div.error-msg').addClass('d-none').text('');
-                    let data = fd2json({ form: obj.form }); //log(data); return; 
+                    let data = fd2json({ form: obj.form });
                     if (addonData) data = { ...data, ...addonData };
                     if (advQry) {
                         // this will append all values matching input id with '_', example if you have input id as 'host' and you want to put the value of host in the values array then jsut puth '_host' in the values array. like advQuery({ key: 'sqlkey', values: ['_host', '_etc'] });
@@ -1802,7 +1805,7 @@ export function updatePopupPosition({ el = null, msg = 'Are you sure?', cb = nul
 window.addEventListener('resize', function () { updatePopupPosition({}) });
 
 
-export function popInput({ el = null, type = 'text', name = 'text-input', ph = '', cb = null }) {
+export function popInput({ el = null, type = 'text', name = 'text-input', ph = '', cb = null, value= '' }) {
     try {
         if (!el) return;
         let rect = el.getBoundingClientRect(); //log(rect);
@@ -1830,6 +1833,7 @@ export function popInput({ el = null, type = 'text', name = 'text-input', ph = '
         input.type = type;
         input.placeholder = ph;
         input.name = name
+        input.value = value;
         input.className = 'form-control form-control-sm';
         input.step = '0.001'
 
@@ -2274,6 +2278,48 @@ export function createNewPage(content) {
 }
 
 
+export const loading = `<div class="loading"><span></span><span></span><span></span><span></span><span></span></div>`;
+export const ebscard = `<div class="ebs-card"><div class="card-content"></div></div>`;
+
+
+export function errorMsg(msg){
+    let btn = jq('<span></span>').addClass('role-btn ms-5').html('<i class="bi bi-x-lg"></i>').click(function(){ jq('.restricted-access').remove() }).prop('title', 'Close');
+    let txt = jq('<span></span').addClass('text-red').text(msg);
+    let div = jq('<div></div').addClass('position-fixed top-0 start-50 translate-middle-x m-2 p-3 d-flex jcb aic gap-2 bg-danger-subtle rounded restricted-access z-5').append(txt, btn);
+    jq('body').append(div);
+}
+
+
+export async function isAdmin() {
+    try {
+        let res = await getData('/apps/is-admin');
+        return res.data;
+    } catch (error) {
+        log(error);
+    }
+}
+
+
+export async function isRrestricted(rc){
+    let admin = await isAdmin();
+    if (admin) {
+        return false;
+    } else{
+        let res = await postData({ url: '/apps/user-restriction', data: { user: cuser, rc } });
+        if (!res?.data) {
+            errorMsg('Resctricted Access');
+            return true
+        }else{
+             return false;
+        }
+    }
+}
+
+export const spinner = `
+<div class="spinner-border text-primary" role="status">
+  <span class="visually-hidden">Loading...</span>
+</div>
+`;
 
   
   // Call the function

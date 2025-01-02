@@ -11,7 +11,8 @@ doc.addEventListener('DOMContentLoaded', async function () {
   jq('#share-page').click(function () {
     let { entity } = getSettings();
     let key = `${entity.entity_id}-${orderid}`;
-    let url = `${window.location.origin}/order/?key=${key}`;
+    // let url = `${window.location.origin}/order/?key=${key}`;
+    let url = `https://api.ebsserver.in/order/?key=${key}`;
     let secretKey = 'your-secret-key';
     let message = `View Order\n${url}`;
     let encodedMessage = encodeURIComponent(message);
@@ -62,20 +63,20 @@ async function loadData(orderid) {
           BILL <span class="fw-400"># ${od?.inv_number}</span>
       </div>
       <div class="d-flex jcb aic fw-500">
-          PARTY <span class="">${od?.party_name}</span>
+          PARTY <span class="fw-bold">${od?.party_name}</span>
       </div> 
-      <div class="d-flex jcb aic ${od?.address?'':'d-none'}">
+      <div class="d-flex jcb aic ${od?.address ? '' : 'd-none'}">
           <div class="ms-auto d-flex flex-column">
-            <span class="ms-auto text-end">${od?.address}</span>
-            <span class="ms-auto">${od?.city}</span>
-            <span class="ms-auto">${od?.pincode}</span>
-            <span class="ms-auto">${od?.state}</span>
+            <span class="ms-auto ${od?.address ? '' : 'd-none'} text-end">${od?.address}</span>
+            <span class="ms-auto ${od?.city ? '' : 'd-none'}">${od?.city}</span>
+            <span class="ms-auto ${od?.pincode ? '' : 'd-none'}">${od?.pincode}</span>
+            <span class="ms-auto ${od?.state ? '' : 'd-none'}">${od?.state}</span>
           </div>
       </div> `;
 
     jq('div.party').html(partystr);
 
-    let str = null; 
+    let str = null;
     if (items && items.length > 0) {
       let tableFormat = 'Classic';
       let [ul] = jq('<ul></ul>').addClass('list-group list-group-flush')
@@ -127,13 +128,13 @@ async function loadData(orderid) {
               DISCOUNT <span>${parseDecimal(od.discount)}</span>
           </li>
           <li class="list-group-item p-0 py-1 d-flex jcb aic ${parseNumber(od?.totaltax) ? '' : 'd-none'} ${od.gst_type == 'igst' ? 'd-none' : ''}">
-              CGST <span class="ms-1 me-auto ${od.tax_type=='inc'?'':'d-none'}">(${od.tax_type}.)</span> <span>${parseDecimal(od.totaltax / 2)}</span>
+              CGST <span class="ms-1 me-auto ${od.tax_type == 'inc' ? '' : 'd-none'}">(${od.tax_type}.)</span> <span>${parseDecimal(od.totaltax / 2)}</span>
           </li>  
           <li class="list-group-item p-0 py-1 d-flex jcb aic ${parseNumber(od?.totaltax) ? '' : 'd-none'} ${od.gst_type == 'igst' ? 'd-none' : ''}">
-              SGST <span class="ms-1 me-auto ${od.tax_type=='inc'?'':'d-none'}">(${od.tax_type}.)</span> <span>${parseDecimal(od.totaltax / 2)}</span>
+              SGST <span class="ms-1 me-auto ${od.tax_type == 'inc' ? '' : 'd-none'}">(${od.tax_type}.)</span> <span>${parseDecimal(od.totaltax / 2)}</span>
           </li>  
           <li class="list-group-item p-0 py-1 d-flex jcb aic ${parseNumber(od?.totaltax) ? '' : 'd-none'} ${od.gst_type == 'igst' ? '' : 'd-none'}">
-              IGST <span class="ms-1 me-auto ${od.tax_type=='inc'?'':'d-none'}">(${od.tax_type}.)</span> <span>${parseDecimal(od.totaltax)}</span>
+              IGST <span class="ms-1 me-auto ${od.tax_type == 'inc' ? '' : 'd-none'}">(${od.tax_type}.)</span> <span>${parseDecimal(od.totaltax)}</span>
           </li>          
           <li class="list-group-item p-0 py-1 d-flex jcb aic ${parseNumber(od?.freight) ? '' : 'd-none'}">
               FREIGHT <span>${parseDecimal(od.freight)}</span>

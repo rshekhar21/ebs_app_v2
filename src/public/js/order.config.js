@@ -1,5 +1,5 @@
-import help, { doc, jq, log, Storage, advanceQuery, createEL, createTable, parseData, parseLocal, parseNumber, fd2json, updatePopupPosition, parseLocals, postData, parseDecimal, storeId, calculateTaxAndPrice, Cookie, xdb, roundOff, showError, showTable, popInput, getActiveEntity, getSettings, convertToDecimal } from "./help.js";
-import { _scanProduct, _searchProduct, numerifyObject } from "./module.js";
+import help, { doc, jq, log, Storage, advanceQuery, createEL, createTable, parseData, parseLocal, parseNumber, fd2json, updatePopupPosition, parseLocals, postData, parseDecimal, storeId, calculateTaxAndPrice, Cookie, xdb, roundOff, showError, showTable, popInput, getActiveEntity, getSettings, convertToDecimal, queryData } from "./help.js";
+import { _scanProduct, _searchProduct, numerifyObject, sendOrderEmail } from "./module.js";
 
 // import 'https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js';
 
@@ -43,6 +43,7 @@ export let details = {
     order_number: null,
     party: null,
     party_name: null,
+    email: null,
     party_id: null,
     emp_id: null,
     savings: 0,
@@ -81,8 +82,9 @@ export let details = {
     update: false,
     notes: null,
     enableScan: false,
+    enable_rewards: false,
+    reward_percent: 0,
 }
-// select id, order_date, order_type, inv_numer as order_number, party, subtotal, discount, freight, round_off, alltotal as total, tax_type, discount, disc_id, disc_percent, category, location
 
 export function resetOrder() {
     let data = Storage.get('ordersData');
@@ -547,8 +549,8 @@ export function showOrderDetails() {
         jq('span.old-bal').text(parseLocal(previous_due) || 0);
         update ? jq('#execute').text('UPDATE') : jq('#execute').text('EXECUTE');
         let scan = jq('#scanEntry');
-        enableScan?jq(scan).prop('checked', true): jq(scan).prop('checked', false);
-        
+        enableScan ? jq(scan).prop('checked', true) : jq(scan).prop('checked', false);
+
         jq('.order-emp').toggleClass('d-none', !emp_id).text(emp_id);
         if (previous_due != 0) {
             jq('span.collect-pymt').html(`(${total + (previous_due || 0)})`);
@@ -955,12 +957,13 @@ function setItemsTable() { //log(3, 'set item table')
             })
         });
 
-        function editProperty(className, propertyName, placeholder, type = 'number', ucase = false) {
+        function editProperty(className, propertyName, placeholder, type = 'number', ucase = false, value = true) {
             jq(tbody).find(className).click(function () {
                 popInput({
                     el: this,
                     type,
                     name: propertyName,
+                    value: value ? this.textContent : '',
                     ph: placeholder,
                     cb: (val) => {
                         let index = jq(this).closest('tr').index();
@@ -1044,7 +1047,8 @@ export async function loadPartyDetails() {
         // let db = new xdb(storeId, 'partys');
         // let data = await db.get(Number(id)); //log(data);
         // let { data: [party] } = await advanceQuery({ key: 'getpartyby_id', values: [id] }); //log(party); //return;
-        let { data: [party] } = await advanceQuery({ key: 'partyDetails', values: [id] }); //log(party);
+        let [party] = await queryData({ key: 'partyDetails', values: [id] }); //log(party);
+        let [rewds] = await queryData({ key: 'partyRewards', values: [id] }); //log(party);
 
         if (od.order_type == "taxinvoice") {
             let rs = await advanceQuery({ key: 'shipAddress', values: [id] });
@@ -1054,7 +1058,7 @@ export async function loadPartyDetails() {
         }
 
         let dueAmt = parseNumber(party?.balance);
-        jq('.party-name').removeClass('text-danger text-success').addClass(dueAmt > 0 ? 'text-danger' : dueAmt < 0 ? 'text-success' : '').text(party.party_name);
+        jq('.party-name').removeClass('text-danger text-success').addClass(dueAmt > 0 ? 'text-danger' : dueAmt < 0 ? 'text-success' : '').text(party?.party_name);
         jq('span.party-id').text(party.party_id);
         jq('span.contact').text(party?.contact || 'Contact Number');
         jq('span.email').text(party?.email || 'Email Address');
@@ -1063,6 +1067,8 @@ export async function loadPartyDetails() {
         jq('span.last-bill').text(parseLocals(party.latest_order_total));
         jq('span.payments').text(parseLocals(party.pymts));
         jq('span.orders-cnt').text(parseLocals(party.orders_cnt));
+        jq('span.opening-bal').text(parseLocals(party.opening_bal));
+        jq('span.rewards').text(parseLocals(rewds?.total_rewards));
         jq('span.due-amount').removeClass('text-danger text-success').addClass(dueAmt > 0 ? 'text-danger' : dueAmt < 0 ? 'text-success' : '').text(parseLocals(dueAmt));
 
         if (od.order_type == 'taxinvoice') {
@@ -1114,6 +1120,7 @@ export async function loadPartyDetails() {
             let { entity } = getSettings();
             party.state.toLowerCase() !== entity?.state.toLowerCase() ? updateDetails({ gstType: 'igst' }) : updateDetails({ gstType: null });
         }
+        updateDetails({ enable_rewards: party.enable_rewards, reward_percent: party.reward_percent });
     } catch (error) {
         log(error);
     }
@@ -1132,24 +1139,6 @@ export async function savePartysdata(party) {
         db.put(obj);
 
         loadPartyDetails();
-    } catch (error) {
-        log(error);
-    }
-}
-
-{/* <div class="d-flex flex-column jcb aie small border-start ps-2">
-<span class="role-btn text-danger" title="Delete Item"><i class="bi bi-trash-fill"></i></span>
-<span class="role-btn text-secondary"><i class="bi bi-pencil-fill" title="Edit Item"></i></span>                
-</div> */}
-
-// calculateRewards();
-
-function calculateRewards() {
-    try {
-        let data = getOrderData();
-        let settings = getSettings(); //log(settings);
-        let subtotal = data.subtotal;
-        let rewards = subtotal * 1
     } catch (error) {
         log(error);
     }
@@ -1198,7 +1187,7 @@ export function refreshOrder() {
         log(error);
     }
 }
-// quickData();
+
 export async function quickData() {
     try {
         let keys = ['quick_closing', 'recent_order', 'unpaid_orders', 'emp_month_sales'];
@@ -1267,14 +1256,9 @@ export async function executeOrder() {
     }
 }
 
-// testupload();
-// async function testupload() {
-//     let { entity_id: folder } = getSettings().entity
-//     let rsp = await postData({ url: '/aws/upload', data: { folder, orderid: 122 } }); log(rsp);
-// }
-
 export async function saveOrder() {
     try {
+        calculateRewards();
         let obj = getOrderData();
         jq('div.exec-process').removeClass('d-none');
         let data = {
@@ -1297,7 +1281,7 @@ export async function saveOrder() {
                 ship_id: null,
                 disc_id: obj.disc_id,
                 disc_percent: obj.disc_percent,
-                rewards: null,
+                rewards: obj.rewards,
                 redeem: null,
                 previous_due: null,
                 order_id: new Date().getTime(),
@@ -1309,28 +1293,25 @@ export async function saveOrder() {
             },
             items: obj.items,
             pymts: obj.pymts,
-        };
+        }; //log(data); return;
 
-        let res = await postData({ url: '/api/create/order', data: { data } }); //log(res.data)//       log('order saved');
+        if (obj.disc_id == '1') data.order.redeem = obj.discount; //log(data.order); return;
+
+        let res = await postData({ url: '/api/create/order', data: { data } });
         if (res.data.status) {
-
             jq('div.exec-process').addClass('d-none');
             jq('span.execute-progress').text(`${100}%`);
-            jq('.order-status').addClass('d-none').removeClass('text-success text-danger').text(''); //paid/unpaid       
+            jq('.order-status').addClass('d-none').removeClass('text-success text-danger').text('');
             resetOrder();
             refreshOrder();
 
-            // jq('#statusMsg').addClass('bg-success-900').removeClass('bg-danger d-none');
-            // jq('#statusMsg>div').text('Order Created Successfully !');
-            // jq('#statusMsg>button').click(function () { jq('#statusMsg').addClass('d-none') });
-
-
             let { entity_id: folder } = getSettings().entity;
-            await postData({ url: '/aws/upload', data: { folder, orderid: res.data.orderid } });
-            await updateIndexdbOrders(res.data.orderid);
+            let orderid = res.data.orderid;
+            let sendEmail = getSettings().general.sendEmail;
+            sendEmail === 'Yes' && sendOrderEmail(orderid);
+            await postData({ url: '/aws/upload', data: { folder, orderid } });
+            await updateIndexdbOrders(orderid);
             await quickData();
-            // setTimeout(() => { jq('#statusMsg').addClass('d-none') }, 4000)
-            // setTimeout(() => { quickData(); }, 1000);
             return true;
         }
     } catch (error) {
@@ -1342,6 +1323,7 @@ export async function saveOrder() {
 
 export async function updateOrder() {
     try {
+        calculateRewards();
         let obj = getOrderData();
         jq('div.exec-process').removeClass('d-none');
         let data = {
@@ -1362,7 +1344,7 @@ export async function updateOrder() {
                 ship_id: obj.ship_id,
                 disc_id: obj.disc_id,
                 disc_percent: obj.disc_percent,
-                rewards: null,
+                rewards: obj.rewards,
                 redeem: null,
                 previous_due: null,
                 order_id: obj.order_id,
@@ -1376,6 +1358,7 @@ export async function updateOrder() {
             pymts: obj.pymts,
         };
 
+        if (obj.disc_id == '1') data.order.redeem = obj.discount; //log(data.order); return;
         let index = 1; //log(obj.items.length); //return;
         let res = await postData({ url: '/api/crud/update/orders', data: { data: data.order } }); //log(res.data)
         if (!res.data || res.data.affaffectedRows === 0) { throw 'Error Updating Purchaes'; }
@@ -1453,6 +1436,21 @@ async function updateIndexdbOrders(id) {
     db.put(c.data, 'payments')
 }
 
+async function calculateRewards() {
+    try {
+        let er = getSettings().remote.rewards; //log(er);
+        if (!er) return;
+        let od = getOrderData();
+        let enable_rewards = od.enable_rewards;
+        if (!enable_rewards) return;
+        let reward_percent = od.reward_percent;
+        let total = od?.total;
+        let rewards = total * reward_percent / 100; //log(rewards);
+        updateDetails({ rewards });
+    } catch (error) {
+        log(error);
+    }
+}
 
 
 

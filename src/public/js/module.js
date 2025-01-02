@@ -1,5 +1,5 @@
 import { setupIndexDB } from "./_localdb.js";
-import help, { doc, jq, log, clickModal, confirmMsg, advanceQuery, postData, queryData, createStuff, getActiveEntity, parseNumber, fetchTable, parseData, createTable, getData, getFinYear, xdb, myIndexDBName, storeId, createEL, fd2json, getSettings, showErrors } from "./help.js";
+import help, { doc, jq, log, clickModal, confirmMsg, advanceQuery, postData, queryData, createStuff, getActiveEntity, parseNumber, fetchTable, parseData, createTable, getData, getFinYear, xdb, myIndexDBName, storeId, createEL, fd2json, getSettings, showErrors, isRrestricted, errorMsg } from "./help.js";
 import { getOrderData, loadPartyDetails, refreshOrder, resetOrder, updateDetails } from "./order.config.js";
 
 const modules = {}
@@ -41,7 +41,7 @@ export async function editParty(id, quick = false, apply_cb = false, cb = false)
 }
 modules.editParty = editParty;
 
-export async function createEditParty({ quick = false, update_id = null, callback = false, applyCallback = false, supplier = false, focus = null }) {
+export async function createEditParty({ quick = false, update_id = null, callback = false, applyCallback = false, supplier = false, focus = null, hideFields = [] }) {
     try {
         let table = 'party';
         let title = 'Create Party';
@@ -52,6 +52,7 @@ export async function createEditParty({ quick = false, update_id = null, callbac
             title = update_id ? 'Edit Party' : 'Create Party';
             table = update_id ? quick ? 'quickEditParty' : 'editParty' : quick ? 'quickParty' : 'party';
         }
+
         // log(table); //return;
         let res = await createStuff({
             title,
@@ -62,6 +63,7 @@ export async function createEditParty({ quick = false, update_id = null, callbac
             cb: callback,
             qryObj: update_id ? { key: 'editParty', values: [update_id] } : null,
             applyButtonText: update_id ? 'Update' : 'Apply',
+            hideFields,
             applyCallback: applyCallback || async function () {
                 let key = update_id ? 'getpartyby_id' : 'getpartyby_maxid'
                 let rs = await advanceQuery({ key, values: [update_id] });
@@ -93,6 +95,7 @@ export async function createEditParty({ quick = false, update_id = null, callbac
 
 export async function editPayment(id, cb = false) {
     try {
+        if (await isRrestricted('LChUNnYK')) return;
         const mb = help.showModal({ title: 'Edit Pyament', applyButtonText: 'Update' }).modal;
         let { form, res } = await help.getForm({ table: 'editPymt', qryobj: { key: 'editPymt', values: [id] } });
         jq(mb).find('div.modal-body').html(form);
@@ -130,6 +133,7 @@ modules.editPayment = editPayment;
 
 export async function deletePayment(id, cb = false) {
     try {
+        if (await isRrestricted('WKPOZyqL')) return;
         let confirm = confirmMsg('Are you sure want to delete this Payment?');
         if (!confirm) return;
         await help.advanceQuery({ key: 'deletePymt', values: [id] });
@@ -282,7 +286,7 @@ export async function _searchParty(val) {
             key: val,
             indexes: ['party_id', 'party_name', 'contact', 'email'],
             columns: ['id', 'party_name', 'party_id', 'contact', 'email'],
-            limit: 20,
+            limit: 10,
             sortby: 'party_name',
         }); //log(arr);
         if (!arr.length) {
@@ -369,7 +373,7 @@ export async function _scanProduct(val) {
     try {
         let db = new xdb(storeId, 'stock');
         // let arr = [];
-        let arr =  await db.getColumns({
+        let arr = await db.getColumns({
             key: val,
             indexes: ['sku'],
             columns: [
@@ -1156,6 +1160,37 @@ export function setEditStockBody(mb) {
 
     jq(mb).find('div.upc-label').after('<div class="d-flex jcb aic gap-3 even hsn-unit"></div>');
     jq(mb).find('div.hsn, div.unit').appendTo(jq(mb).find('div.hsn-unit'));
+}
+
+// sendOrderEmail('257').then(d => log(d)).catch(e => log(e));
+
+export async function sendOrderEmail(orderid) {
+    try {
+        let cnf = confirm('Send Order Email?');
+        if(!cnf) return;
+        let [rsp] = await queryData({ key: 'sendEmail', values: [orderid] }); //log(rsp); return 'ok';
+        let email = rsp.email;
+        let party = rsp.party_name;
+        if (!email) { errorMsg('No Email Id found!'); return };
+        let { entity } = getSettings()
+        let key = `${entity.entity_id}-${rsp.order_id}`;
+        // let link = `${window.location.origin}/order/?key=${key}`;
+        let link = `https://api.ebsserver.in/order/?key=${key}`;
+        let html = `<div class="position-fixed top-0 start-50 translate-middle-x m-2 w-20 z-5" id="sending-email">
+                        <div class="d-flex justify-content-between align-items-center gap-2 bg-primary-subtle py-3 px-4 rounded">
+                            <span class="fs-5 text-primary-emphasis">Sending Email...</span>
+                            <div class="spinner-border spinner-border-sm text-primary-emphasis" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>`;
+        jq('body').append(html);
+        let res = await postData({ url: '/api/email/order', data: { email, link, party } });
+        jq('#sending-email').remove();
+        if (res.data.status) { }
+    } catch (error) {
+        log(error);
+    }
 }
 
 

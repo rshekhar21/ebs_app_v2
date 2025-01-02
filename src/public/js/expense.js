@@ -1,4 +1,4 @@
-import help, { displayDatatable, doc, fd2json, getForm, jq, log, pageHead, searchData } from "./help.js";
+import help, { displayDatatable, doc, fd2json, getForm, isRrestricted, jq, log, pageHead, searchData } from "./help.js";
 
 doc.addEventListener('DOMContentLoaded', function () {
     pageHead({ title: 'EXPENSE' });
@@ -9,6 +9,7 @@ doc.addEventListener('DOMContentLoaded', function () {
 
 async function loadData() {
     let res = await help.fetchTable({ key: 'expense' }); //log(res);
+    jq('div.process').addClass('d-none');
     showData(res);
 }
 
@@ -27,33 +28,39 @@ function showData(data) {
                     ]
                 });
                 jq('#editExp').click(async function () {
-                    let mb = help.showModal({ title: 'Exit Expense', applyButtonText: 'Update' }).modal;
-                    let { form, res } = await help.getForm({ table: 'expense', qryobj: { key: 'editExpense', values: [id] } });
-                    jq(mb).find('div.modal-body').html(form);
-                    help.loadOptions({ selectId: 'bank_id', qryObj: { key: 'selectBanks' }, defaultValue: res.data[0].bank_id });
-                    help.loadOptions({ selectId: 'pymt_method', qryObj: { key: 'pymtmethods' }, defaultValue: res.data[0].pymt_method });
-                    jq(mb).find('button.apply').click(async function () {
-                        try {
-                            jq('div.p-status').removeClass('d-none');
-                            jq(this).addClass('disabled');
-                            let data = help.fd2json({ form }); //log(data);
-                            let res = await help.postData({ url: '/api/crud/update/expense', data: { data } }); //log(res);
-                            if (res.data?.affectedRows) {
-                                jq('span.success').removeClass('d-none');
-                                jq('span.fail, div.p-status').addClass('d-none');
-                                jq(this).removeClass('disabled');
+                    try {
+                        if (await isRrestricted('nvWYRrLe')) return;
+                        let mb = help.showModal({ title: 'Exit Expense', applyButtonText: 'Update' }).modal;
+                        let { form, res } = await help.getForm({ table: 'expense', qryobj: { key: 'editExpense', values: [id] } });
+                        jq(mb).find('div.modal-body').html(form);
+                        help.loadOptions({ selectId: 'bank_id', qryObj: { key: 'selectBanks' }, defaultValue: res.data[0].bank_id });
+                        help.loadOptions({ selectId: 'pymt_method', qryObj: { key: 'pymtmethods' }, defaultValue: res.data[0].pymt_method });
+                        jq(mb).find('button.apply').click(async function () {
+                            try {
+                                jq('div.p-status').removeClass('d-none');
+                                jq(this).addClass('disabled');
+                                let data = help.fd2json({ form }); //log(data);
+                                let res = await help.postData({ url: '/api/crud/update/expense', data: { data } }); //log(res);
+                                if (res.data?.affectedRows) {
+                                    jq('span.success').removeClass('d-none');
+                                    jq('span.fail, div.p-status').addClass('d-none');
+                                    jq(this).removeClass('disabled');
+                                }
+                            } catch (error) {
+                                jq('span.success, div.p-status').addClass('d-none');
+                                jq('span.fail').removeClass('d-none');
+                                log(error);
                             }
-                        } catch (error) {
-                            jq('span.success, div.p-status').addClass('d-none');
-                            jq('span.fail').removeClass('d-none');
-                            log(error);
-                        }
-                    })
-                    new bootstrap.Modal(mb).show();
-                    mb.addEventListener('hidden.bs.modal', function () { loadData() })
+                        })
+                        new bootstrap.Modal(mb).show();
+                        mb.addEventListener('hidden.bs.modal', function () { loadData() })
+                    } catch (error) {
+                        log(error);
+                    }
                 })
                 jq('#deleteExp').click(async function () {
                     try {
+                        if (await isRrestricted('yYMmqZwl')) return;
                         let confirm = help.confirmMsg('Are you sure want to delete this Expense?');
                         if (!confirm) return;
                         await help.advanceQuery({ key: 'deleteExp', values: [id] });
@@ -81,8 +88,8 @@ async function createExpense() {
 
         jq(mb).find('div.modal-body').html(form);
 
-        help.loadOptions({ selectId: 'bank_id', qryObj: { key: 'selectBanks' } });
-        help.loadOptions({ selectId: 'pymt_method', qryObj: { key: 'pymtmethods' } });
+        // help.loadOptions({ selectId: 'bank_id', qryObj: { key: 'selectBanks' } });
+        // help.loadOptions({ selectId: 'pymt_method', qryObj: { key: 'pymtmethods' } });
 
         jq(mb).find('button.apply').click(async function () {
             try {

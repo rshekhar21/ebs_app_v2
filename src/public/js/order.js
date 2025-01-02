@@ -9,7 +9,6 @@ doc.addEventListener('DOMContentLoaded', () => {
     loadOrderDetails();
     // setImages();  
 
-
     jq('div.order-date').click(function () {
         let cal = showCalender().modal;
         new bootstrap.Modal(cal).show();
@@ -107,7 +106,7 @@ doc.addEventListener('DOMContentLoaded', () => {
                             callback: () => {
                                 if (res.affectedRows) {
                                     let party = res.insertId;
-                                    updateDetails({ party, party_name: res.fd.party_name })
+                                    updateDetails({ party, party_name: res.fd.party_name, email: res.fd?.email||null })
                                 }
                             }
                         });
@@ -129,12 +128,16 @@ doc.addEventListener('DOMContentLoaded', () => {
                 parseData({ tableObj: tbl, colsToRight: ['contact'], colsToHide: ['id', 'party_id', 'email'] });
                 jq(tbl.tbody).find('tr').addClass('role-btn').each(function (i, e) {
                     jq(e).click(function () {
-                        let party = jq(this).find(`[data-key="id"]`).text(); //log(party)
-                        let party_name = jq(this).find(`[data-key="party"]`).text(); //log(party_name);
+                        let index = jq(this).index();
+                        let po = arr[index]; //log(po);
+                        let party = po.id;// jq(this).find(`[data-key="id"]`).text(); //log(party)
+                        let party_id = po.party_id;
+                        let party_name = po.party_name; // jq(this).find(`[data-key="party"]`).text(); //log(party_name);
+                        let email = po.email; 
                         jq(srchdiv).html('')
                         jq('div.srch-party').addClass('d-none');
                         jq('div.party-info').html('<i class="bi bi-info-circle-fill"></i>');
-                        updateDetails({ party, party_name })
+                        updateDetails({ party, party_name, party_id, email })
                         loadOrderDetails();
                     })
                 })
@@ -529,6 +532,44 @@ doc.addEventListener('DOMContentLoaded', () => {
 })
 
 
+$(document).ready(function () {
+    let inactivityTimer;
+    let { screenSaverWait } = getSettings().general;
+    if (screenSaverWait === 'Never') return;
+
+    let swt = screenSaverWait || 5; //log(swt)
+    let idleTimeout = Number(swt) * 60 * 1000; // 5 minutes in milliseconds
+    
+    // Function to show the clock
+    function showClock() {
+        $('#clock').removeClass('d-none')
+        setInterval(() => {
+            jq('div.clock').text(moment().format('h:mm'))
+        }, 1000);
+    }
+
+    // Function to hide the clock
+    function hideClock() {
+        $('#clock').addClass('d-none')
+    }
+
+    // Reset inactivity timer
+    function resetInactivityTimer() {
+        clearTimeout(inactivityTimer);
+        hideClock();
+        inactivityTimer = setTimeout(() => {
+            showClock();
+        }, idleTimeout);
+    }
+
+    // Monitor user activity
+    $(document).on('mousemove keydown', resetInactivityTimer);
+
+    // Initialize the inactivity timer
+    resetInactivityTimer();
+});
+
+
 // $(document).ready(function() {
 //     const codeReader = new ZXing.BrowserMultiFormatReader();
 //     let isScanning = false; // Moved outside to maintain state
@@ -607,7 +648,7 @@ doc.addEventListener('DOMContentLoaded', () => {
 // });
 
 
-$(document).ready(function() {
+$(document).ready(function () {
     const codeReader = new ZXing.BrowserMultiFormatReader();
     let isScanning = false;
 
@@ -709,7 +750,7 @@ $(document).ready(function() {
     });
 
     // Optional: Allow users to switch cameras while scanning
-    $('#cameraSelect').change(function() {
+    $('#cameraSelect').change(function () {
         if (isScanning) {
             const selectedDeviceId = $(this).val();
             console.log("Switched to Device ID:", selectedDeviceId);

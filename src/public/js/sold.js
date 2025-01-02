@@ -1,5 +1,5 @@
 import { updateIndexDB } from "./_localdb.js";
-import h, { advanceQuery, displayDatatable, doc, jq, log, pageHead, parseData, searchData, storeId, xdb } from "./help.js";
+import h, { advanceQuery, displayDatatable, doc, jq, log, pageHead, parseData, queryData, searchData, storeId, xdb } from "./help.js";
 
 doc.addEventListener('DOMContentLoaded', function () {
     pageHead({ title: 'sold' });
@@ -12,11 +12,11 @@ doc.addEventListener('DOMContentLoaded', function () {
                 cb: async () => {
                     try {
                         jq('div.process').removeClass('d-none');
-                        let res = await advanceQuery({ key: 'sold', limit: 500 }); //log(res.data); return;
-                        let data = res.data;
+                        let res = await queryData({ key: 'sold', limit: 500 }); //log(res.data); return;
+                        if (!res.length) return;
                         let db = new xdb(storeId, 'sold');
                         db.clear();
-                        await db.add(data);
+                        await db.add(res);
                         loadData();
                     } catch (error) {
                         log(error);
@@ -50,7 +50,7 @@ doc.addEventListener('DOMContentLoaded', function () {
 
 
 async function loadData() {
-    try {        
+    try {
         let db = new xdb(storeId, 'sold');
         let data = await db.getColumns({
             columns: ['id', 'dated', 'order_id', 'party_name', 'sku', 'hsn', 'category', 'pcode', 'product', 'size', 'unit', 'qty', 'price', 'disc', 'gst', 'tax', 'net', 'gross', 'emp_id', 'emp_name'],

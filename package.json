@@ -2,11 +2,12 @@
   "name": "ebs",
   "version": "1.0.2",
   "description": "New EBS App Desktop application",
-  "main": "index.js",
+  "main": "main.js",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder",
-    "release": "electron-builder --publish=always"
+    "release": "electron-builder --publish=always",
+    "dev": "nodemon server"
   },
   "repository": {
     "type": "git",
@@ -32,7 +33,7 @@
       "runAfterFinish": true,
       "createStartMenuShortcut": true,
       "shortcutName": "EBS",
-      "perMachine": true
+      "perMachine": false
     },
     "publish": [
       {
@@ -74,8 +75,10 @@
     "mkdirp": "^3.0.1",
     "multer": "^1.4.5-lts.1",
     "mysql2": "^3.11.3",
+    "node-jose": "^2.2.0",
     "nodemailer": "^6.9.15",
     "short-uuid": "^5.2.0",
+    "sqlite3": "^5.1.7",
     "uglify-js": "^3.19.3",
     "uuid": "^11.0.2",
     "xlsx": "^0.18.5"

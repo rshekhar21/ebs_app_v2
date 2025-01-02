@@ -13,17 +13,19 @@ async function action(req, res, modal) {
 
 
 function listApps(req, res) { action(req, res, modal.listApps) }
+function appUsersList(req, res) { action(req, res, modal.appUsersList) }
 function advanceQuery(req, res) { action(req, res, modal.advanceQuery) }
 function localQuery(req, res) { action(req, res, modal.localQuery) }
 function createRecord(req, res) { action(req, res, modal.createRecord) }
 function updateRecord(req, res) { action(req, res, modal.updateRecord) }
-function dlAWS(req, res) { action(req, res, modal.dlAWS) }
 function ulAWS(req, res) { action(req, res, modal.ulAWS) }
+function dlAWS(req, res) { action(req, res, modal.dlAWS) }
 function sendActivation(req, res) { action(req, res, modal.sendActivation) }
 function activateEmail(req, res) { action(req, res, modal.activateEmail) }
 function changePassword(req, res) { action(req, res, modal.changePassword) }
 function register(req, res) { action(req, res, modal.register) }
 function getActiveEmail(req, res) { action(req, res, modal.getActiveEmail) }
+function sendAuthCode(req, res) { action(req, res, modal.sendAuthCode) }
 function sendPasswordResetCode(req, res) { action(req, res, modal.sendPasswordResetCode) }
 function resetUserPassword(req, res) { action(req, res, modal.resetUserPassword) }
 function createOrder(req, res) { action(req, res, modal.createOrder) }
@@ -31,8 +33,11 @@ function encrypt(req, res) { action(req, res, modal.encrypt) }
 function setClassicSKU(req, res) { action(req, res, modal.setClassicSKU) }
 function bulkEdit(req, res) { action(req, res, modal.bulkEdit) }
 function resetSchema(req, res) { action(req, res, modal.resetSchema) }
-
-
+function restLocalAppAdminPwd(req, res) { action(req, res, modal.restLocalAppAdminPwd) }
+function userResctictions(req, res) { action(req, res, modal.userResctictions) }
+function emailOrder(req, res) { action(req, res, modal.emailOrder) }
+function importPartys(req, res) { action(req, res, modal.importPartys) }
+function showApps(req, res) { action(req, res, modal.showApps) }
 
 module.exports = {
     listApps,
@@ -54,4 +59,11 @@ module.exports = {
     setClassicSKU,
     bulkEdit,
     resetSchema,
+    appUsersList,
+    sendAuthCode,
+    restLocalAppAdminPwd,
+    userResctictions,
+    emailOrder,
+    importPartys,
+    showApps
 };

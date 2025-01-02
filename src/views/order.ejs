@@ -1,5 +1,7 @@
 <?-include('./_inc/start.ejs') ?>
 
+
+
 <!-- mobile -->
 <div class="container-fluid px-0 py-1 d-md-none">
     <div class="d-flex flex-column gap-2 px-2 overflow-auto" style="min-width: 300px; height: 98dvh;">
@@ -444,7 +446,7 @@
                             <span class="input-group-text role-btn sync-success text-success d-none"><i class="bi bi-patch-check-fill"></i></span>
                             <input type="search" class="form-control flex-fill w-50" id="searchParty" name="supplier"
                                 placeholder="Search Party" title="Search Party By Name, Contact, Email">
-                            <input type="text" class="form-control" id="searachByMemid" title="Search By Cutomer ID"
+                            <input type="text" class="form-control" id="searchByMemid" title="Search By Cutomer ID"
                                 placeholder="Cust. ID" style="width: min(100px, 150px);">
                         </div>
 
@@ -586,9 +588,17 @@
                                         Payments
                                         <span class="payments">0.00</span>
                                     </li>
+                                    <li class="list-group-item d-flex jcb aic text-success">
+                                        Rewards
+                                        <span class="rewards fw-500">0.00</span>
+                                    </li>
                                     <li class="list-group-item d-flex jcb aic">
                                         Dues
                                         <span class="due-amount fw-500">0.00</span>
+                                    </li>
+                                    <li class="list-group-item d-flex jcb aic">
+                                        Opening Balance
+                                        <span class="opening-bal fw-500">0.00</span>
                                     </li>
                                 </ul>
                             </div>
@@ -1615,7 +1625,7 @@
                             Discounts</h6>
                         <h6 class="py-2 ps-2 rounded-end customsizes role-btn" data-ebs="customsizes"
                             data-name="CUSTOME SIZES">Custom Sizes</h6>
-                        <h6 class="py-2 ps-2 rounded-end partyfields role-btn" data-ebs="partyfields"
+                        <h6 class="py-2 ps-2 rounded-end partyfields role-btn" data-ebs="partyFields"
                             data-name="PARTY FIELDS">Qucik Partyfields </h6>
                         <h6 class="py-2 ps-2 rounded-end restrictions role-btn" data-ebs="restrictions"
                             data-name="USERS & RESTRICTIONS">Users Rescrictions</h6>
@@ -1811,6 +1821,17 @@
 
 <div id="popupbox" class="z-5"></div>
 <div id="inputbox" class="z-5"></div>
+
+<div class="position-fixed top-0 end-0 w-100 h-100 d-flex jcc aic z-5 d-none" id="clock" style="background-color: rgb(24, 24, 24);">
+    <div class="clock text-white monoton-regular" style="font-size: 8rem; letter-spacing: 8px;"></div>
+</div>
+
+<!-- <div class="position-fixed top-0 end-0 m-4 text-white d-none d-md-flex flex-column align-items-end"  style="background-image: url(/img/login_d.jpg); background-repeat: no-repeat; background-size: cover; z-index: 1000;">
+    <div class="clock  monoton-regular"  style="font-size: 5rem; letter-spacing: 8px;"></div>
+    <div class="date nothing-you-could-do-regular"  style="font-size: 3rem;"></div>
+    <div class="day nothing-you-could-do-regular"  style="font-size: 3rem;"></div>
+ </div> -->
+
 
 <script type="module" src="/js/order.js"></script>
 <script type="module" src="/js/order.desktop.js"></script>

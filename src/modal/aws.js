@@ -1,6 +1,11 @@
 const { S3Client, ListObjectsV2Command, PutObjectCommand, GetObjectCommand  }=require('@aws-sdk/client-s3');
 const log=console.log;
-const credentials = require('./sk'); 
+
+// Set your AWS credentials
+const credentials = {
+  accessKeyId: '',
+  secretAccessKey: '',
+};
 
 // Set the AWS region
 const region='ap-south-1';

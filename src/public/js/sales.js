@@ -1,5 +1,5 @@
 import { setupIndexDB, updateIndexDB, verifyIndex } from "./_localdb.js";
-import h, { addTableColumnsTotal, advanceQuery, createTable, displayDatatable, doc, jq, log, pageHead, parseData, storeId, xdb } from "./help.js";
+import h, { addTableColumnsTotal, advanceQuery, createTable, displayDatatable, doc, jq, log, pageHead, parseData, queryData, storeId, xdb } from "./help.js";
 
 doc.addEventListener('DOMContentLoaded', function () {
     pageHead({ title: 'sales', viewSearch: false });
@@ -18,51 +18,20 @@ doc.addEventListener('DOMContentLoaded', function () {
             {
                 title: 'Hard Refresh',
                 icon: '<i class="bi bi-arrow-clockwise"></i>',
-                cb: () => {
-                    let config = [
-                        {
-                            store: 'sales',
-                            options: { keyPath: 'id', autoIncrement: true },
-                            indexes: [
-                                { name: 'id', unique: true },
-                                { name: 'month', keyPath: 'month', unique: false },
-                                { name: 'year', keyPath: 'year', unique: false },
-                                { name: 'fyear', keyPath: 'fyear', unique: false },
-                                { name: 'dated', keyPath: 'dated', unique: false },
-                            ]
-                        }
-                    ];
-                    // setupIndexDB(config);
-                    const storeUpdates = [
-                        {
-                            store: 'sales',
-                            addIndexes: [
-                                {
-                                    name: 'year',
-                                    keyPath: 'year',
-                                    unique: false
-                                }
-                            ],
-                            deleteIndexes: [] // No indexes to delete
-                        }
-                    ];
-                    // updateIndexDB(storeId, storeUpdates);
-                    // verifyIndex(storeId, 'sales', 'year');
-                    // return;
-                    advanceQuery({ key: 'allsales' }).then(res => {
-                        let data = res.data; log(data);
-                        let db = new xdb(storeId, 'sales');
-                        db.clear();
-                        db.add(data);
-                        loadData(cyear, month);
-                    }).catch(err => log(err))
+                cb: async () => {
+                    let data = await queryData({ key: 'allsales' }); //log(data);
+                    if(!data.length) return;
+                    let db = new xdb(storeId, 'sales');
+                    db.clear();
+                    await db.add(data);
+                    loadData(cyear, month);
                 }
             }
         ]
     })
 
 
-    function prevMonth() { 
+    function prevMonth() {
         pMonth--;
         if (pMonth === 0) { pMonth = 12; year-- }
         log(pMonth, year);
@@ -90,16 +59,16 @@ async function loadData(year, month) {
         let arr = await db.getColumns({
             hidecols: ['id', 'month', 'fyear', 'year'],
             where: { month, year }
-        }); //log(arr);
+        }); log(arr);
 
-        if(arr.length){
+        if (arr.length) {
             let tbl = createTable(arr);
             showData(tbl);
-        }else{
+        } else {
             const tbl = await h.fetchTable({ key: 'sales', values: [year, month] });
             showData(tbl);
         }
-        
+
     } catch (error) {
         log(error);
     }
@@ -107,7 +76,7 @@ async function loadData(year, month) {
 
 function showData(data) {
     try {
-        let { table, tbody, thead } = data;        
+        let { table, tbody, thead } = data;
         parseData({
             tableObj: data,
             colsToTotal: ['orders', 'sales', 'net_sale', 'returns', 'ws', 'event', 'discount', 'gst', 'freight', 'qty', 'gr', 'pymt', 'cash', 'bank'],
@@ -116,7 +85,7 @@ function showData(data) {
             hideBlanks: ['ws', 'event', 'freight', 'returns', 'discount', 'gr']
         });
         let div = displayDatatable(table);
-        if(!div) jq('#root').html(jq('<div></div>').addClass('d-flex jcc aic vh-50 text-danger fs-4').text('No Records Found!'));
+        if (!div) jq('#root').html(jq('<div></div>').addClass('d-flex jcc aic vh-50 text-danger fs-4').text('No Records Found!'));
 
     } catch (error) {
         log(error);

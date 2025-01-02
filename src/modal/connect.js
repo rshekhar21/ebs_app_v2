@@ -23,6 +23,25 @@ class Connect {
       return 'invalid request';
     }
   }
+
+  async query(sql, values = []) {
+    try {
+      return new Promise((resolve, reject) => {
+        if (!sql) return reject('invalid request');
+        const con = mysql.createConnection(this.cs);
+        con.query(sql, values, (err, result, fields) => {
+          if (err) reject(err);
+          con.end(); // Close the connection after the query is executed
+          resolve(result, fields);
+        });
+      });
+    } catch (error) {
+      log(error);
+      return 'invalid request';
+    }
+  }
 }
+
+
 
 module.exports = Connect;

@@ -11,13 +11,186 @@ const mysql = require('mysql2/promise');
 const CryptoJS = require('crypto-js');
 const shortid = require('short-uuid');
 const axios = require('axios');
+const jwt = require('jsonwebtoken');
+const jose = require('node-jose');
+const JWT_SECRET = 'your_jwt_secret_key';
+const restrictions = require('./restrictions'); //log(restrictions);
+const { sendEmail } = require('./email');
+const path = require('path');
+const fs = require('fs');
+const os = require('os');
+const { error } = require('console');
+const db = require('./sqlite');
 
+function querySqlite(sql, params = []) {
+    return new Promise((resolve, reject) => {
+        db.all(sql, params, (err, rows) => {
+            if (err) {
+                reject(err);
+            }
+            resolve(rows);
+        });
+    });
+}
+
+showApps({ body: { client_id: 1 } }).then(res => log(res)).catch(err => log(err));
+
+async function showApps(req) {
+    try {
+        // SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';
+        let res = await querySqlite(`select * from apps`); //log('res', res);
+        if (res.length == 0) {
+            let rsp = await listApps(req); log(rsp);
+            // if (rsp.length) {
+            //     rsp.forEach(col => {
+            //         let sql = `INSERT INTO apps (app_id, app_name, access_key) VALUES (?,?,?);`; //log(sql); 
+            //         db.run(sql, [col.app_id, col.trade_name, col.access_key], (err) => {
+            //             if (err) log(err);
+            //         })
+                        let qry = `INSERT INTO db_info (app_id, host, port, user, password, database) VALUES (?,?,?,?,?,?);`; //log(qry);
+            //     })
+            // }
+        }
+        db.close();
+        return 'ok';
+    } catch (error) {
+        log(error);
+    }
+}
+
+async function createEncryptedJWT(payload) {
+    const keystore = jose.JWK.createKeyStore();
+
+    // Define the key in JWK format
+    const jwkKey = {
+        kty: 'oct',                   // Key type: octet (symmetric key)
+        k: 'WcTza4v8FzW2yHN2WE+zEdIszpUiaCk+HjBE89rqCKE=', // Base64-encoded key
+    };
+
+    try {
+        // Add the key to the keystore
+        const key = await keystore.add(jwkKey);
+
+        // Create the encrypted JWT
+        const encryptedJWT = await jose.JWE.createEncrypt({ format: 'compact' }, key)
+            .update(JSON.stringify(payload))
+            .final();
+
+        return encryptedJWT;
+    } catch (err) {
+        console.error('Error creating encrypted JWT:', err);
+        throw err;
+    }
+}
+
+async function decryptEncryptedJWT(encryptedToken) {
+    const keystore = jose.JWK.createKeyStore();
+
+    // Define the key in JWK format (same key used for encryption)
+    const jwkKey = {
+        kty: 'oct',                   // Key type: octet (symmetric key)
+        k: 'WcTza4v8FzW2yHN2WE+zEdIszpUiaCk+HjBE89rqCKE=', // Base64-encoded key
+    };
+
+    try {
+        // Add the key to the keystore
+        const key = await keystore.add(jwkKey);
+
+        // Decrypt the JWT
+        const decrypted = await jose.JWE.createDecrypt(key).decrypt(encryptedToken);
+
+        // Parse and return the decrypted payload
+        return JSON.parse(decrypted.plaintext.toString());
+    } catch (err) {
+        console.error('Error decrypting JWT:', err);
+        throw err;
+    }
+}
+
+async function remoteCS(app_id) {
+    try {
+        if (!app_id) throw 'unauthorized access';
+        let sql = 'select d.`host`, d.`port`, d.`user`, d.`password`, d.`database` from db_info d join apps a on d.`app_id` = a.`id` where a.`app_id` = ?';
+        let res = await runSql(sql, [app_id]);
+        return res
+    } catch (error) {
+        log(error);
+        return false
+    }
+}
+
+async function connectSession(app_id) {
+    try {
+        let [cnstr] = await remoteCS(app_id); //log(cnstr);
+        const token = jwt.sign({ cnstr }, JWT_SECRET, { expiresIn: '365d' }); //log(token);
+        return token;
+    } catch (error) {
+        log(error);
+    }
+}
+
+async function connectEncypSession(app_id) {
+    try {
+        let [cnstr] = await remoteCS(app_id); log(cnstr);
+        const token = await createEncryptedJWT(cnstr);
+        return token;
+    } catch (error) {
+        log(error);
+    }
+}
+
+async function loadCnstr(req) {
+    try {
+        let cnstr = null;
+        if (req?.cnstr) {
+            const decoded = jwt.verify(req.cnstr, JWT_SECRET);
+            cnstr = decoded.cnstr; //log(226, cnstr);
+        } else {
+            let { ssid } = req.body
+            [cnstr] = await remoteCS(ssid); //log(229, cnstr);
+        }
+        // log(231, cnstr);
+        return cnstr;
+    } catch (error) {
+        log(error);
+    }
+}
+
+async function loadeCnstr(req) {
+    try {
+        let cnstr = null;
+        let ecnstr = req?.cookies?.ecnstr || req.ecnstr; //log('ecnstr', ecnstr);
+        if (ecnstr) {
+            const decoded = await decryptEncryptedJWT(ecnstr); //log('decoded', decoded);
+            cnstr = decoded;
+        } else {
+            let { ssid } = req.body
+            [cnstr] = await remoteCS(ssid);
+        }
+        // log(231, cnstr);
+        return cnstr;
+    } catch (error) {
+        log(error);
+    }
+}
 
 async function loginUser(req) {
     try {
-        let { username, password } = req.body;
+        let { username, password, 'g-recaptcha-response': captcha } = req.body; //log(captcha);
         if (!username) throw 'Username Required';
         if (!password) throw 'Password Required';
+        if (!captcha) throw 'Unauthorized Login';
+        const response = await axios.post('https://www.google.com/recaptcha/api/siteverify', null, {
+            params: {
+                // secret: '6LfD75IqAAAAAOmbHobyJJyjlOUoFpo9o_ZuL2Do', // localhost Replace with your reCAPTCHA secret key
+                secret: '6LfK6JIqAAAAAMheDMHiN_cdI0GrDfPSjg6kczRA', // store.myebs.in Replace with your reCAPTCHA secret key
+                response: captcha,
+            },
+        });
+        // log(response.data);
+        if (!response.data.success) {
+            return res.status(400).json({ status: 'error', message: 'CAPTCHA verification failed.' });
+        }
         let sql = 'select `user_id` as `id`, `client_id` from `users` where `username` = ? and `password` = md5(?);';
         let res = await runSql(sql, [username.trim(), password.trim()]);
         return res;
@@ -27,15 +200,67 @@ async function loginUser(req) {
     }
 }
 
+async function userLogin(req) {
+    try {
+        let { username, password, ssid } = req.body;
+        if (!ssid) throw 'Unauthorized request';
+        if (!username) throw 'Username Required';
+        if (!password) throw 'Password Required';
+        const cnstr = await loadeCnstr(req);
+        const remoteQry = new connection(cnstr);
+        let sql = "select `id` AS userid, `username`, `user_role` AS userrole from `users` where is_active = 'yes' and `username` = ? and `password` = md5(?);";
+        let values = [username, password];
+        let [res] = await remoteQry.execute(sql, values);
+        return res;
+    } catch (error) {
+        log(error);
+    }
+}
+
+async function userResctictions(req) {
+    try {
+        let { ssid, user, rc } = req.body;
+        let username = req.cookies.username;
+        if (!rc) throw 'Unauthorized request';
+        if (!ssid) throw 'Unauthorized request';
+        if (!username) throw 'Username Required';
+        if (user !== username) throw 'Invalid Access'
+        const cnstr = await loadeCnstr(req);
+        const remoteQry = new connection(cnstr);
+        let restiction = restrictions[rc];
+        let sql = `select ${restiction} from restrictions r join users u on u.id = r.userid where u.username = ?;`;
+        let [res] = await remoteQry.execute(sql, [username]);
+        return res[restiction];
+    } catch (error) {
+        log(error);
+        return 0;
+    }
+}
+
 async function listApps(req) {
     try {
         let { client_id } = req.body;
-        let sql = "select `id`, `app_id`, `trade_name`, `access_key`, `status`, `port_number` from `apps` where `client_id` = ?;";
+        let qry = "select `id`, `app_id`, `trade_name`, `access_key`, `status`, `port_number` from `apps` where `client_id` = ? AND is_active = 'yes';";
+        let sql = "select a.`id`, a.`app_id`, a.`trade_name`, a.`access_key`, d.`host`, d.`port`, d.`user`, d.`password`, d.`database` from `apps` a join `db_info` d on a.`id` = d.`app_id` where a.`client_id` = ? AND a.`is_active` = 'yes';"
         let res = await runSql(sql, [client_id]);
         return res;
     } catch (error) {
         log(error);
         return false;
+    }
+}
+
+async function appUsersList(req) {
+    try {
+        let { ssid } = req.body;
+        if (!ssid) throw 'Unauthorized request';
+        let sql = "SELECT `name`, `username`, `user_role` FROM `users` WHERE `is_active` = 'yes' ORDER BY `id` ASC;";
+        const cnstr = await loadeCnstr(req); //log('modal.js 230',cnstr); //return 'ok'
+        const remoteQry = new connection(cnstr);
+        let res = await remoteQry.execute(sql);
+        return res;
+    } catch (error) {
+        log(error);
     }
 }
 
@@ -82,10 +307,11 @@ function setItems(orderid, items) {
 }
 
 async function createOrder(req) {
-    let { ssid, data } = req.body;
+    let { ssid, data, ecnstr } = req.body;
     let { order, items, pymts } = data;
 
-    const [cnstr] = await remoteCS(ssid);
+    // const [cnstr] = await remoteCS(ssid);
+    const cnstr = await loadeCnstr(req);
     const connection = await mysql.createConnection(cnstr);
     try {
         // Start a transaction
@@ -168,7 +394,8 @@ async function insertRecord(req, type) {
         const fieldsArr = type === 'c' ? create[tbl] : update[tbl]; //log(164, fieldsArr);
         fieldsArr.forEach(f => values.push(kvp[0][f] || null));
         sql = config.createSqlStmt(tbl, type); //log(sql, values); //return {sql}; //log(sql);
-        const [cnstr] = await remoteCS(ssid);
+        // const [cnstr] = await remoteCS(ssid);
+        const cnstr = await loadeCnstr(req);
         const remoteQry = new connection(cnstr);
         let res = await remoteQry.execute(sql, values);
         return res;
@@ -196,7 +423,7 @@ async function updateRecord(req) {
 
 async function advanceQuery(req) {
     try {
-        let { data, ssid } = req.body; //log(req.body);
+        let { data, ssid } = req.body; //log(req);
         if (!data) throw 'no information found!'
         if (!ssid) throw 'invalid request';
         const key = data?.key;
@@ -215,8 +442,9 @@ async function advanceQuery(req) {
         if (entity) { values.push('1') }
         const bulk = data?.bulk ?? null;
         if (bulk) { sql = `${sql} ${data.bulkstr};` }
-
-        const [cnstr] = await remoteCS(ssid); //log(cnstr);
+        // const decoded = jwt.verify(req.cnstr, JWT_SECRET); //log(decoded.cnstr);
+        // const [cnstr] = await remoteCS(ssid); log(cnstr);
+        const cnstr = await loadeCnstr(req); //log('cnstr', cnstr);
         const remoteQry = new connection(cnstr);
         let res = await remoteQry.execute(sql, values);
         return res;
@@ -251,21 +479,11 @@ async function localQuery(req) {
     }
 }
 
-async function remoteCS(app_id) {
-    try {
-        if (!app_id) throw 'unauthorized access';
-        let sql = 'select d.`host`, d.`port`, d.`user`, d.`password`, d.`database` from db_info d join apps a on d.`app_id` = a.`id` where a.`app_id` =?';
-        return await runSql(sql, [app_id]);
-    } catch (error) {
-        log(error);
-        return false
-    }
-}
-
 async function newSKU(ssid) {
     try {
         if (!ssid) throw 'Invalid Request';
-        const [cnstr] = await remoteCS(ssid);
+        // const [cnstr] = await remoteCS(ssid);
+        const cnstr = await loadeCnstr(req);
         const remoteQry = new connection(cnstr);
         let sql = 'SELECT MAX(id) + 1000 AS sku FROM stock;'
         let res = await remoteQry.execute(sql); //log(res);
@@ -282,7 +500,8 @@ async function setClassicSKU(req) {
         if (!ssid) throw 'Invalid Request';
         const id = data.id;
         if (!id) throw 'Invalid/Missing ID !';
-        const [cnstr] = await remoteCS(ssid);
+        // const [cnstr] = await remoteCS(ssid);
+        const cnstr = await loadeCnstr(req);
         const remoteQry = new connection(cnstr);
         const sku = Number(id) + 1000; //log(sku, id);
         // const sql = "UPDATE `stock` SET `sku` = ? WHERE `id` = ?;";
@@ -299,7 +518,8 @@ async function bulkEdit(req) {
         const { ssid, data: db } = req.body;
         let { data, selected } = db;
         if (!ssid) throw 'Invalid Request';
-        const [cnstr] = await remoteCS(ssid);
+        // const [cnstr] = await remoteCS(ssid);
+        const cnstr = await loadeCnstr(req);
         const remoteQry = new connection(cnstr);
         let sql = `UPDATE stock SET ${Object.entries(data)
             .filter(([key, value]) => value !== '') // Include non-blank values
@@ -322,12 +542,13 @@ function newDynamicSKU(ssid) {
         return false;
     }
 }
-// let sku = newDynamicSKU('abcd'); log(sku);
 
-async function newPartyID(ssid) {
+async function newPartyID(req) {
     try {
+        let { ssid } = req.body
         if (!ssid) throw 'Invalid Request';
-        const [cnstr] = await remoteCS(ssid);
+        // const [cnstr] = await remoteCS(ssid);
+        const cnstr = await loadeCnstr(req);
         const remoteQry = new connection(cnstr);
         let sql = 'SELECT MAX(id) + 101 as party_id FROM party;'
         let res = await remoteQry.execute(sql);
@@ -341,19 +562,22 @@ async function newPartyID(ssid) {
 async function ulAWS(req) {
     try {
         let { folder, orderid, ssid } = req.body; //log(req.body); //return 'ok';
+        // let cnstr = req.cnstr;
+        let ecnstr = req.cookies.ecnstr; //log('cnstr 516', ecnstr)
         if (!folder) throw 'error';
-        let [{ id, order_id }] = await advanceQuery({ body: { ssid, data: { key: 'getorderids', values: [orderid, orderid] } } }); //log(id, order_id); return 'ok';
+        let [{ id, order_id }] = await advanceQuery({ ecnstr, body: { ssid, data: { key: 'getorderids', values: [orderid, orderid] } } });
+        //log(id, order_id); return 'ok';
         // let id = res.id;
         let data = await Promise.all([
-            await advanceQuery({ body: { ssid, data: { key: 'basicorder', values: [id, id] } } }),
-            await advanceQuery({ body: { ssid, data: { key: 'viewOrderItemSql', values: [id] } } }),
-            await advanceQuery({ body: { ssid, data: { key: 'viewEntity', eid: true } } }),
-            await advanceQuery({ body: { ssid, data: { key: 'viewGS', values: [id] } } }),
-            await advanceQuery({ body: { ssid, data: { key: 'viewGR', values: [id] } } }),
-            await advanceQuery({ body: { ssid, data: { key: 'partyDueBalByorderId', values: [id, id, id] } } }),
-            await advanceQuery({ body: { ssid, data: { key: 'settings', eid: true } } }),
-            await advanceQuery({ body: { ssid, data: { key: 'thermal', values: [id] } } }),
-            await advanceQuery({ body: { ssid, data: { key: 'soldItems', values: [id] } } }),
+            await advanceQuery({ ecnstr, body: { ssid, data: { key: 'basicorder', values: [id, id] } } }),
+            await advanceQuery({ ecnstr, body: { ssid, data: { key: 'viewOrderItemSql', values: [id] } } }),
+            await advanceQuery({ ecnstr, body: { ssid, data: { key: 'viewEntity', eid: true } } }),
+            await advanceQuery({ ecnstr, body: { ssid, data: { key: 'viewGS', values: [id] } } }),
+            await advanceQuery({ ecnstr, body: { ssid, data: { key: 'viewGR', values: [id] } } }),
+            await advanceQuery({ ecnstr, body: { ssid, data: { key: 'partyDueBalByorderId', values: [id, id, id] } } }),
+            await advanceQuery({ ecnstr, body: { ssid, data: { key: 'settings', eid: true } } }),
+            await advanceQuery({ ecnstr, body: { ssid, data: { key: 'thermal', values: [id] } } }),
+            await advanceQuery({ ecnstr, body: { ssid, data: { key: 'soldItems', values: [id] } } }),
             // await h.runsql(pymtsSql),
         ]); //log(data); return 'ok';
 
@@ -384,6 +608,119 @@ async function dlAWS(req) {
         return res;
     } catch (error) {
         return false;
+    }
+}
+
+async function sendAuthCode(req) {
+    try {
+        let { email } = req.body;
+        if (!email) throw 'Email id is required!';
+        let user = req.user; //log(user);
+        if (!user.id) throw 'Invalid Access';
+        let qry = "SELECT `auth_key_sent` FROM `clients` WHERE `id` = ? AND `email` IS NOT NULL;";
+        let [rs] = await runSql(qry, [user.client_id]); //log(rs); return { msg: 'test', status: false };
+        if (rs?.auth_key_sent === 1) { return { status: false, msg: 'The Authorization code has been sent to your registered email address.! Please check your inbox, including your spam folder, or you can contact our support team at at service.myebs@gmail.com' } }
+        let sql = "SELECT c.auth_key FROM ebs_clients.clients c JOIN ebs_clients.users u ON c.id = u.client_id WHERE c.id = ? AND u.email = ? AND  u.user_id = ? AND  email_verified = 1;"
+        let [res] = await runSql(sql, [user.client_id, email, user.id]);
+        let mailOptions = {
+            from: '"EBS"<service.myebs@gmail.com>',
+            to: email,
+            subject: 'Authorization Code',
+            html: `
+            <div style="font-size: 1.2px; line-height: 1.5;">
+                <p style="font-size: 14px;">Authorization Code.</p>
+                <p style="font-size: 18px; font-weight: bold; color:rgb(48, 48, 48); font-family: Verdana, Geneva, Tahoma, sans-serif;">${res?.auth_key}</p>     
+                <p style="font-size: 14px; color: grey;">The authorization code is required to reset or change the admin password for the application. This code is issued only once; therefore, it is essential to keep this email secure.</p>            
+            </div>`
+        }
+        let rsp = await sendMail(mailOptions); log(rsp);
+        if (rsp?.msg == 'Email Sent') {
+            await runSql("UPDATE `clients` SET auth_key_sent = ? WHERE id = ?;", [true, user.client_id]);
+            return { msg: 'Auth Code Send Successfully', status: true, rs: rsp };
+        } else {
+            return { status: false, msg: 'Could not sent Eail! Please Try later.' }
+        }
+    } catch (error) {
+        log(error);
+        return { error };
+    }
+}
+
+async function restLocalAppAdminPwd(req) {
+    try {
+        let { username, password, ssid, authkey } = req.body;
+        if (!username) throw 'Username Required';
+        if (!password) throw 'Password Required';
+        let sql = "SELECT id FROM ebs_clients.clients WHERE auth_key = ?;"; // '46e89011-dea7-4dcf-a827-df39076073df';
+        let [res] = await runSql(sql, [authkey]); //log(res);
+        if (!res?.id) throw 'Invalid Auth Key';
+
+        let qry = "UPDATE users SET password = md5(?) WHERE username = ?;";
+        const cnstr = await loadeCnstr(req);
+        const remoteQry = new connection(cnstr);
+        let rs = await remoteQry.execute(qry, [password, username]); //log(rs);
+        return rs;
+    } catch (error) {
+        log(error);
+        return error;
+    }
+}
+
+async function emailOrder(req) {
+    try {
+        let { email, link, party, ssid } = req.body;
+        if (!ssid) throw 'Unauthorized request';
+        if (!email) throw 'Email id is required!';
+        let app = req.cookies.app_name;
+        const cnstr = await loadeCnstr(req);
+        const remoteQry = new connection(cnstr);
+        let sql = "SELECT service_email, email_pwd, email_client FROM settings WHERE id = 1;";
+        let [res] = await remoteQry.execute(sql);
+        if (!res) throw 'Invalid Email Settings';
+        let mailOptions = {
+            from: `"${app}"<${res.service_email}>`,
+            to: email,
+            subject: "Order Details",
+            html: `
+                <body>
+                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                        <h2>Dear <span
+                                style="font-size:2rem; font-family: 'Segoe Print', Tahoma, Geneva, Verdana, sans-serif;color:rgb(64, 67, 224); margin-left: 1rem">${party}</span>
+                        </h2 <p style="font-size: 1rem; color: #3a3838;">Thanks for the Visit </p>
+                        <p style="font-size: 1rem;  color: #3a3838;">Please find your order details
+                            <a href="${link}">here</a>.
+                        </p>
+
+                        <p style="font-size:0.9rem;color:#3a3838; margin: 0;">Sincerely</p>
+                        <p style="font-size:0.8rem;color:#3a3838; margin: 0;">The ${app} Team</p>
+
+                        <p><i><span style="font-size:10.0pt;color:#3a3838">Please Add <a href="mailto:${res.service_email}"
+                                        target="_blank">${res.service_email}</a> in your address book so that mail from us going to
+                                    SPAM/JUNK</i></p>
+
+                        <p style="text-align:justify; font-size: 0.8rem; color:#202020;"><span style="color:#3a3838">We commits to
+                                Save/Secure/Protect your Detail and will never share it with any other Person/Vendor/Party etc. This
+                                info is only to improve our customer services and to use for the customer information system.</span></p>
+
+                        <p style="text-align:justify; font-size: 0.8rem; color:#686868; border-top: 1px solid grey;">
+                            This email and any files transmitted with it are confidential and intended solely for the use of the
+                            individual or entity to whom they are addressed. If you have received this email in error please notify the
+                            system manager. This message contains confidential information and is intended only for the individual
+                            named. If you are not the named addressee you should not disseminate, distribute or copy this e-mail. Please
+                            notify the sender immediately by e-mail if you have received this e-mail by mistake and delete this e-mail
+                            from your system. If you are not the intended recipient you are notified that disclosing, copying,
+                            distributing, or taking any action in reliance on the contents of this information is strictly prohibited.
+                            The information contained in this mail is propriety and strictly confidential.
+                        </p>
+                    </div>
+                </body>
+                `,
+        }
+        let rsp = await sendEmail(res, mailOptions); //log(rsp);
+        return { status: true, res: rsp };
+    } catch (error) {
+        log(error);
+        return error;
     }
 }
 
@@ -497,6 +834,17 @@ async function getActiveEmail(req) {
     }
 }
 
+async function verifyPassword(req) {
+    try {
+        let sql = "SELECT id FROM users WHERE user_id = ? and password = md5(?);";
+        let [res] = await runSql(sql, [req.user.id, req.body.password]); //log(res, res?.id);
+        return res?.id ? true : false;
+    } catch (error) {
+        log(error);
+        return { error };
+    }
+}
+
 async function sendPasswordResetCode(req) {
     try {
         let { email_id: email } = req.body; //log(email); return 'ok';
@@ -602,9 +950,9 @@ function decrypt(encrypted) {
     }
 }
 
-async function resetSchema(req){
+async function resetSchema(req) {
     try {
-        log( req.body );
+        log(req.body);
         let data = {
             username: '',
             passwrod: '',
@@ -615,14 +963,58 @@ async function resetSchema(req){
         return false;
     }
 }
+// log(path.join(__dirname, 'uploads'));
 
-// console.log(CryptoJS.MD5('VTJGc2RHVmtYMTlFMWUzUWRsWkpWUlRoWjRYUWxtMWplZXZ6N2FCdnY5dEIrNm5IWmlqUWFhbHJMbDg3UVdqRXlvRnZsS3Ird1RNQnpWWGlDNWpHQXc9PQ==').toString());
 
-// console.log(decrypt('VTJGc2RHVmtYMTlFMWUzUWRsWkpWUlRoWjRYUWxtMWplZXZ6N2FCdnY5dEIrNm5IWmlqUWFhbHJMbDg3UVdqRXlvRnZsS3Ird1RNQnpWWGlDNWpHQXc9PQ=='))
+async function importPartys(req) {
+    try {
+        const { ssid, filename } = req.body; //log(ssid);
+        if (!ssid) throw 'Unauthorized request';
+        const filePath = path.join(__dirname, '..', 'folder', filename);
+        const jsonData = fs.readFileSync(filePath, 'utf-8');
+        const pd = JSON.parse(jsonData); //log(pd[0]);
+        if (!pd.length) throw 'No Data found';
+        const cnstr = await loadeCnstr(req);
+        req.body.cnstr = cnstr;
+        let rsp = await config.bulkInsertParty(req); //log(rsp);
+        fs.unlinkSync(filePath);
+        return { status: true, msg: 'Partys Imported Successfully' };
+    } catch (error) {
+        log(error);
+        return error;
+    }
+}
 
+// testfunction().then(res => log()).catch(err => log(err));
+
+
+
+async function testfunction(cnstr) {
+    try {
+        let sql = 'select max(id) id from party;'; //log(sql);
+        const mysql = require('mysql2');
+        const pool = mysql.createPool(cnstr); //log(pool)
+        function runQry(sql, values = []) {
+            return new Promise(function (resolve, reject) {
+                pool.query(sql, values, (err, rows, fields) => {
+                    if (err) {
+                        return reject(err.message)
+                    }
+                    return resolve(rows, fields)
+                })
+            })
+        }
+        let res = await runQry(sql); log(res);
+        // const con = await mysql.createConnection(cnstr);
+        // const [results, fields] = await con.query(sql); log(results);
+    } catch (error) {
+        log(error);
+    }
+}
 
 module.exports = {
     loginUser,
+    userLogin,
     listApps,
     advanceQuery,
     localQuery,
@@ -644,7 +1036,19 @@ module.exports = {
     createOrder,
     encrypt,
     bulkEdit,
-    resetSchema
+    resetSchema,
+    connectSession,
+    appUsersList,
+    verifyPassword,
+    sendAuthCode,
+    restLocalAppAdminPwd,
+    createEncryptedJWT,
+    decryptEncryptedJWT,
+    connectEncypSession,
+    userResctictions,
+    emailOrder,
+    importPartys,
+    showApps,
 }
 
 

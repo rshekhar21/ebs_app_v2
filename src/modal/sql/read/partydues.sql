@@ -1,7 +1,9 @@
+-- Active: 1728019028452@@ebsserver.in@3306@gbxecgjdbxwi
 SELECT *
 FROM (
-        SELECT p.id, p.`party_name` AS `party`, p.`opening_bal` AS ob, o.`total`, y.`pymt`, (
-                o.`total` + p.`opening_bal` - y.`pymt`
+        SELECT
+            p.id, p.`party_name` AS `party`, p.`opening_bal` AS ob, o.`total`, y.`pymt`, (
+                COALESCE(o.`total`, 0) + COALESCE(p.`opening_bal`, 0) - COALESCE(y.`pymt`, 0)
             ) AS `balance`
         FROM `party` p
             LEFT JOIN (

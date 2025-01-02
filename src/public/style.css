@@ -82,6 +82,51 @@
   /* Display the counter */
 }
 
+
+.uppercase { text-transform: uppercase;}
+.lowercase { text-transform: lowercase;}
+
+/* button-x */
+.button-x {
+  background-color: #222222;
+  color: #3b82f6;
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
+  width: 100px;
+  height: 45px;
+  transition: 0.3s;
+}
+
+.button-x:hover {
+  background-color: #3b82f6;
+  box-shadow: 0 0 0 5px #3b83f65f;
+  color: #fff;
+}
+
+/* button-x */
+
+
+.ebs-card {
+  width: 150px;
+  height: 150px;
+  border-radius: 20px;
+  padding: 3px;
+  /* box-shadow: rgba(151, 65, 252, 0.2) 0 15px 30px -5px; */
+  background-image: linear-gradient(144deg,#AF40FF, #5B42F3 50%,#00DDEB);
+}
+
+.card-content {
+  background: rgb(255, 255, 255);
+  border-radius: 18px;
+  width: 100%;
+  height: 100%;
+}
+
+
+
+
+
 /* For Chrome, Safari, Edge, Opera */
 input[type=number]::-webkit-outer-spin-button,
 input[type=number]::-webkit-inner-spin-button {
@@ -102,13 +147,15 @@ input[type=number] {
   right: 0;
   width: 300px;
   min-height: 60px;
-  background-color: #ff000080; /* Yellow for warning */
+  background-color: #ff000080;
+  /* Yellow for warning */
   color: #ffffff;
   padding: 10px;
   border-radius: 5px;
   text-align: center;
   font-weight: bold;
-  display: none; /* Initially hidden */
+  display: none;
+  /* Initially hidden */
 }
 
 
@@ -260,6 +307,10 @@ input[type=number] {
   justify-content: flex-start !important;
 }
 
+.fcol {
+  flex-direction: column;
+}
+
 .vh-95 {
   height: 95vh !important;
 }
@@ -371,6 +422,10 @@ input[type=number] {
 
 .max-dvh-50 {
   max-height: 50dvh !important;
+}
+
+.text-red {
+  color: var(--red-500);
 }
 
 .text-purple {
@@ -599,7 +654,7 @@ max-height-90dvh {
 
 
 .tbl-custom {
-  font-size:var(--custom-tbl-size);
+  font-size: var(--custom-tbl-size);
 }
 
 
@@ -728,6 +783,102 @@ max-height-90dvh {
   /* border-color: #373737;  */
 
 }
+
+/* spinner start */
+
+.play-alert-container[data-v-471427f8] {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 110px;
+  width: 110px;
+  top: 50%;
+  left: 50%;
+  margin: -55px 0 0 -55px;
+}
+
+.loading-spinner-container[data-v-1691a5a1] {
+  z-index: 1;
+  border-radius: 50%;
+  width: 96px;
+  height: 96px;
+  background: rgba(0, 0, 0, .7);
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-spinner-container .loading[data-v-1691a5a1]::after {
+  content: "";
+  margin: -42px 0 0 -42px;
+  height: 84px;
+  width: 84px;
+  -webkit-animation: animation-rotate-data-v-1691a5a1 2000ms linear infinite;
+  animation: animation-rotate-data-v-1691a5a1 2000ms linear infinite;
+}
+
+.loading-spinner-container .loading[data-v-1691a5a1] {
+  margin: -36px 0 0 -36px;
+  height: 72px;
+  width: 72px;
+  -webkit-animation: animation-rotate-data-v-1691a5a1 1000ms linear infinite;
+  animation: animation-rotate-data-v-1691a5a1 1000ms linear infinite;
+}
+
+.loading-spinner-container .loading[data-v-1691a5a1]::before {
+  content: "";
+  margin: -30px 0 0 -30px;
+  height: 60px;
+  width: 60px;
+  -webkit-animation: animation-rotate-data-v-1691a5a1 1000ms linear infinite;
+  animation: animation-rotate-data-v-1691a5a1 1000ms linear infinite;
+}
+
+.loading-spinner-container .loading[data-v-1691a5a1],
+.loading-spinner-container .loading[data-v-1691a5a1]::before,
+.loading-spinner-container .loading[data-v-1691a5a1]::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border: 3px solid rgba(118, 184, 63, 0);
+  border-left-color: #76b83f;
+  border-radius: 999px;
+}
+
+.play-alert-container .play-alert.hidden[data-v-471427f8] {
+  transform: scale(1.2);
+  transition: all .3s;
+  opacity: 0;
+}
+
+.play-alert-container .play-alert[data-v-471427f8] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, .6);
+  border: 3px solid #fff;
+  border-radius: 50%;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  opacity: 1;
+}
+
+@-webkit-keyframes animation-rotate-data-v-1691a5a1 {
+  100% {
+    transform: rotate(360deg)
+  }
+}
+
+@keyframes animation-rotate-data-v-1691a5a1 {
+  100% {
+    transform: rotate(360deg)
+  }
+}
+
+/* spinner end */
 
 
 

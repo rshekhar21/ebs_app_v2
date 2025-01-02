@@ -1,5 +1,5 @@
 import { setupIndexDB } from './_localdb.js';
-import help, { jq, log, doc, fetchTable, parseNumber, parseLocal, advanceQuery, pageHead, displayDatatable, searchData, parseData, createStuff, createEL, myIndexDBName, xdb, storeId, createTable, showErrors, postData, getSettings, queryData } from './help.js';
+import help, { jq, log, doc, fetchTable, parseNumber, parseLocal, advanceQuery, pageHead, displayDatatable, searchData, parseData, createStuff, createEL, myIndexDBName, xdb, storeId, createTable, showErrors, postData, getSettings, queryData, isRrestricted } from './help.js';
 import { _delStock, _loadSrchstock, setEditStockBody } from './module.js';
 
 doc.addEventListener('DOMContentLoaded', function () {
@@ -12,6 +12,7 @@ doc.addEventListener('DOMContentLoaded', function () {
             {
                 title: 'Add Stock',
                 cb: async () => {
+                    if(await isRrestricted('gibIeSGN')) return;
                     let res = await createStuff({
                         title: 'Add Stock',
                         table: 'stock',
@@ -162,7 +163,7 @@ doc.addEventListener('DOMContentLoaded', function () {
                     if (data.length) {
                         let db = new xdb(storeId, 'stock');
                         db.clear();
-                        await db.put(data);
+                        await db.add(data);
                         jq('div.process').addClass('d-none');
                         loadData();
                     }
@@ -203,7 +204,7 @@ async function loadData(key = null) {
             indexes: [`sku`, `product`, `pcode`, `price`, `mrp`, `brand`, `label`, `hsn`, `upc`, `section`, `season`, `colour`, `category`, `supplier`, `unit`, `ean`],
             // columns: [`id`, `sku`, `product`, `pcode`, `mrp`, `price`, `wsp`, `gst`, `size`, `discount`, `disc_type`, `brand`, `colour`, `label`, `section`, `season`, `category`, `upc`, `hsn`, `unit`, `prchd_on`, `purch_id`, `bill_number`, `supid`, `supplier`, `ean`, `cost`, `purch_price`, `cost_gst`, `qty`, `sold`, `defect`, `returned`, `available`,],
             // rename: { 'available': 'avl', 'returned': 'gr', 'discount': 'disc' },
-            limit: '250', 
+            limit: '500', 
             sortby: 'id', 
             sortOrder: 'desc'
         });
@@ -262,6 +263,7 @@ function showData(data) {
 
                 jq('#editStock').click(async function () {
                     try {
+                        if(await isRrestricted('ChkBjNwf')) return;
                         let db = new xdb(storeId, 'stock'); //log(id);
                         let [arr] = await db.getColumns({ key: id, indexes: ['id'], columns: ['id', 'purch_id'], limit: 1, });
                         let table = 'stock';
@@ -290,12 +292,14 @@ function showData(data) {
                 })
 
                 jq('#delete').click(async function () {
+                    if(await isRrestricted('BcmUCgFW')) return;
                     let key = jq('#search').val();
                     _delStock(id, () => loadData(key));
                 })
 
                 jq('#updateSKU').click(async function () {
                     try {
+                        if(await isRrestricted('ChkBjNwf')) return;
                         let cnf = confirm('Update SKU?');
                         if (!cnf) return;
                         let { data: res } = await postData({ url: '/api/set-classic-sku', data: { data: { id } } });

@@ -18,7 +18,6 @@ async function loadSettings(){
         ];
 
         arr.forEach(s=>{
-            log(s);
             let container = createEL('div');
             jq(container).addclass('container');
             let types = createEL('div');

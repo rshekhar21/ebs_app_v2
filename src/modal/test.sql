@@ -1,4 +1,310 @@
--- Active: 1728019028452@@myebsserver.in@3306@db_demo
+
+
+
+select a.`id`, a.`app_id`, a.`trade_name`, a.`access_key`, d.`host`, d.`port`, d.`user`, d.`password`, d.`database` from `apps` a join `db_info` d on a.`id` = d.`app_id` where a.`client_id` = 1 AND a.`is_active` = 'yes';
+
+SELECT * FROM apps;
+
+SELECT `host`, `port`, `user`, `password`, `database` FROM ebs_clients.`db_info` d join `apps` a ON d.`app_id` = a.`id` WHERE a.`app_id` = 'f195e355-2d3f-4fac-9043-4256dcc74363'
+
+
+DESCRIBE clients;
+
+ALTER TABLE `clients` ADD COLUMN `auth_key_sent` BOOLEAN DEFAULT 0;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- ALTER TABLE fwufpbbsvjqy.`party` ADD COLUMN `reward_percent` VARCHAR(4) DEFAULT '1' AFTER `rewards`;
+-- ALTER TABLE tkjuzgkyvyjj.`party` ADD COLUMN `reward_percent` VARCHAR(4) DEFAULT '1' AFTER `rewards`;
+-- ALTER TABLE hpnpnokrjchq.`party` ADD COLUMN `reward_percent` VARCHAR(4) DEFAULT '1' AFTER `rewards`;
+-- ALTER TABLE lepmjkyuturs.`party` ADD COLUMN `reward_percent` VARCHAR(4) DEFAULT '1' AFTER `rewards`;
+-- ALTER TABLE ntipwecemkfc.`party` ADD COLUMN `reward_percent` VARCHAR(4) DEFAULT '1' AFTER `rewards`;
+-- ALTER TABLE pavsnduvjvtk.`party` ADD COLUMN `reward_percent` VARCHAR(4) DEFAULT '1' AFTER `rewards`;
+-- ALTER TABLE rqekvcgzdzgc.`party` ADD COLUMN `reward_percent` VARCHAR(4) DEFAULT '1' AFTER `rewards`;
+-- ALTER TABLE byrrusmypims.`party` ADD COLUMN `reward_percent` VARCHAR(4) DEFAULT '1' AFTER `rewards`;
+
+
+-- ALTER TABLE addboss.`party` ADD COLUMN `reward_percent` VARCHAR(4) DEFAULT '1' AFTER `rewards`;
+-- ALTER TABLE db_collection.`party` ADD COLUMN `reward_percent` VARCHAR(4) DEFAULT '1' AFTER `rewards`;
+-- ALTER TABLE db_crew.`party` ADD COLUMN `reward_percent` VARCHAR(4) DEFAULT '1' AFTER `rewards`;
+-- ALTER TABLE db_crewmn.`party` ADD COLUMN `reward_percent` VARCHAR(4) DEFAULT '1' AFTER `rewards`;
+-- ALTER TABLE db_deepak.`party` ADD COLUMN `reward_percent` VARCHAR(4) DEFAULT '1' AFTER `rewards`;
+-- ALTER TABLE db_fashion.`party` ADD COLUMN `reward_percent` VARCHAR(4) DEFAULT '1' AFTER `rewards`;
+-- ALTER TABLE db_hkimplex.`party` ADD COLUMN `reward_percent` VARCHAR(4) DEFAULT '1' AFTER `rewards`;
+-- ALTER TABLE db_saurab.`party` ADD COLUMN `reward_percent` VARCHAR(4) DEFAULT '1' AFTER `rewards`;
+-- ALTER TABLE db_sovereign.`party` ADD COLUMN `reward_percent` VARCHAR(4) DEFAULT '1' AFTER `rewards`;
+-- ALTER TABLE db_styleworth.`party` ADD COLUMN `reward_percent` VARCHAR(4) DEFAULT '1' AFTER `rewards`;
+-- ALTER TABLE db_trident.`party` ADD COLUMN `reward_percent` VARCHAR(4) DEFAULT '1' AFTER `rewards`;
+-- ALTER TABLE db_twn.`party` ADD COLUMN `reward_percent` VARCHAR(4) DEFAULT '1' AFTER `rewards`;
+-- ALTER TABLE local_pawan.`party` ADD COLUMN `reward_percent` VARCHAR(4) DEFAULT '1' AFTER `rewards`;
+-- ALTER TABLE pooja_samagri.`party` ADD COLUMN `reward_percent` VARCHAR(4) DEFAULT '1' AFTER `rewards`;
+
+SELECT reward_percent from pooja_samagri.party;
+
+SELECT DISTINCT party_type FROM party;
+
+SHOW DATABASES;
+
+-- addboss
+-- byrrusmypims
+-- db_addboss
+-- db_collection
+-- db_crew
+-- db_crewmn
+-- db_deepak
+-- db_demo
+-- db_fashion
+-- db_hkimplex
+-- db_poojasamigri
+-- db_rockon
+-- db_saurab
+-- db_sovereign
+-- db_sparsh
+-- db_styleworth
+-- db_trident
+-- db_twn
+-- dhiidjnlsyia
+-- ebs_clients
+-- fwufpbbsvjqy
+-- gbxecgjdbxwi
+-- gzxynqgulilv
+-- hpnpnokrjchq
+-- lepmjkyuturs
+-- local_pawan
+-- mydatabase
+-- ntipwecemkfc
+-- pavsnduvjvtk
+-- pooja_samagri
+-- rqekvcgzdzgc
+-- tkjuzgkyvyjj
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SELECT p.*, total AS billing, pymt AS pymts, orders_cnt, (COALESCE(total, 0) - COALESCE(pymt, 0)) AS balance, (SELECT alltotal FROM orders WHERE id = (SELECT MAX(id) FROM orders WHERE party = p.id)) AS latest_order_total FROM party p LEFT JOIN (SELECT party, SUM(alltotal) total, count(party) AS orders_cnt FROM orders GROUP BY party) o ON o.party = p.id LEFT JOIN (SELECT party, SUM(amount) pymt FROM pymtfyear GROUP BY party) y ON y.party = p.id WHERE p.id = 312;
+select party_id from party where rewards is null;
+
+SELECT COUNT(*) FROM party WHERE party_type = 'Customer';
+DELETE FROM orders WHERE id > 0;
+ALTER TABLE orders AUTO_INCREMENT = 1;
+DELETE FROM payments WHERE id > 0;
+ALTER TABLE payments AUTO_INCREMENT = 1;
+
+DELETE FROM party WHERE id > 0;
+ALTER TABLE party AUTO_INCREMENT = 1;
+
+
+
+
+UPDATE party SET party_type = 'Customer' WHERE party_type = 'retail';
+UPDATE party SET party_type = 'Supplier' WHERE party_type = 'SUP/WS';
+
+
+describe party;
+
+SELECT id FROM party WHERE enable_rewards = 1 ORDER BY id DESC limit 10;
+
+SELECT rewards FROM orders WHERE PARTY =17;
+
+
+SELECT SUM(rewards - redeem) as avl_rwds FROM orders WHERE party = 17;
+SELECT party, SUM(rewards - redeem) AS total_rewards FROM orders GROUP BY party;
+SELECT rewards, redeem FROM orders WHERE party = 17;;
+
+SELECT party, SUM(rewards - redeem) AS total_rewards
+FROM orders
+WHERE party = 17
+GROUP BY party;
+
+SELECT party, SUM(IFNULL(rewards, 0) - IFNULL(redeem, 0)) AS total_rewards FROM orders WHERE party = ? GROUP BY party;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SELECT * FROM settings;
+
+SELECT * FROM users;
+SELECT * FROM users ORDER BY id ASC;
+SELECT `name`, `username` FROM `users` WHERE `is_active` = 'yes' ORDER BY `id` ASC;
+SELECT id FROM ebs_clients.clients WHERE auth_key = '46e89011-dea7-4dcf-a827-df39076073df';
+
+
+SELECT p.party_name, p.email, o.order_id FROM orders o JOIN party p ON o.party = p.id WHERE o.id = 260;
+
+DELETE p FROM party p LEFT JOIN orders o ON o.party = p.id LEFT JOIN payments y ON y.party = p.id LEFT JOIN purchase u ON u.supid = p.id WHERE p.id = 49 AND o.party IS NULL AND y.party IS NULL AND u.supid IS NULL;
+
+SELECT * FROM gbxecgjdbxwi.party ORDER BY id desc;
+
+DELETE FROM gbxecgjdbxwi.party WHERE id > 0;
+
+alter Table gbxecgjdbxwi.party AUTO_INCREMENT = 1;
+
+SELECT id, party_id, party_name, opening_bal FROM gbxecgjdbxwi.party WHERE opening_bal <> 0
+
+SELECT party_type, COUNT(id) AS partys FROM party GROUP BY party_type;
+
+DESCRIBE party;
+SELECT * FROM party;
+SELECT * FROM orders;
+SELECT * FROM pymtfyear;
+
+
+
+
+SELECT c.auth_key FROM ebs_clients.clients c JOIN ebs_clients.users u ON c.id = u.client_id WHERE c.id = 1 AND u.email = 'rshekhar21@gmail.com' AND email_verified = 1 AND u.user_id = '8e28ba2b';
+
+select * from ebs_clients.clients;
+SELECT * from ebs_clients.users;
+
+DESCRIBE users;
+
+SELECT * FROM restrictions WHERE userid = 2;
+
+select manual_bill from restrictions r join users u on u.id = r.userid where u.username = 'user';
+
+show create table restrictions;
+
+SELECT * FROM notes;
+
+CREATE TABLE `restrictions` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `userid` int unsigned NOT NULL,
+  `change_order_date` tinyint(1) DEFAULT '0',
+  `change_product_mode` tinyint(1) DEFAULT '1',
+  `manual_bill` tinyint(1) DEFAULT '1',
+  `edit_order` tinyint(1) DEFAULT '0',
+  `edit_payment` tinyint(1) DEFAULT '0',
+  `edit_entity` tinyint(1) DEFAULT '0',
+  `edit_party` tinyint(1) DEFAULT '1',
+  `edit_bank` tinyint(1) DEFAULT '0',
+  `edit_expense` tinyint(1) DEFAULT '0',
+  `edit_stock` tinyint(1) DEFAULT '0',
+  `edit_purchase` tinyint(1) DEFAULT '0',
+  `edit_settigns` tinyint(1) DEFAULT '0',
+  `delete_order` tinyint(1) DEFAULT '0',
+  `delete_payment` tinyint(1) DEFAULT '0',
+  `delete_stock` tinyint(1) DEFAULT '0',
+  `delete_purchase` tinyint(1) DEFAULT '0',
+  `delete_bank` tinyint(1) DEFAULT '0',
+  `delete_expense` tinyint(1) DEFAULT '0',
+  `delete_entity` tinyint(1) DEFAULT '0',
+  `view_sales` tinyint(1) DEFAULT '0',
+  `view_employees` tinyint(1) DEFAULT '0',
+  `view_partydues` tinyint(1) DEFAULT '0',
+  `view_expenses` tinyint(1) DEFAULT '1',
+  `view_orders` tinyint(1) DEFAULT '1',
+  `view_closing` tinyint(1) DEFAULT '1',
+  `view_purchase` tinyint(1) DEFAULT '1',
+  `create_bank` tinyint(1) DEFAULT '0',
+  `create_stock` tinyint(1) DEFAULT '0',
+  `create_entity` tinyint(1) DEFAULT '0',
+  `create_refund` tinyint(1) DEFAULT '0',
+  `create_purchase` tinyint(1) DEFAULT '0',
+  `create_user` tinyint(1) DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `userid` (`userid`),
+  CONSTRAINT `restrictions_ibfk_1` FOREIGN KEY (`userid`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=latin1
+
+
+
+
+
+
+
+
+
 
 SELECT o.`id`, DATE_FORMAT(o.`order_date`, '%d/%m/%Y') AS `dated`, DATE_FORMAT(o.`order_date`, '%Y-%m-%d') AS `order_date`, p.`party_name`, o.`party`, p.`party_id`, o.`inv_number`, o.`order_type`, qs.`qty_sold` AS `qty`, o.`subtotal`, o.`discount`, o.`totaltax` AS `tax`, o.`freight`, o.`alltotal` AS `total`, o.`manual_tax`, py.`pymt`, o.`adjustment`, o.`round_off`, o.`alltotal` - ( COALESCE(py.`pymt`, 0) + COALESCE(o.`adjustment`, 0) ) AS `balance`, o.`fin_year`, o.`category`, o.`location`, o.`disc_id`, o.`disc_percent`, o.`rewards`, o.`redeem`, o.`notes`, o.`ship_id`, o.`tax_type`, o.`gst_type`, o.`previous_due`, MONTH(o.`order_date`) AS `month`, YEAR(o.`order_date`) AS `year`, u.`username` AS `biller`, o.`order_id`, o.`timestamp`, o.`order_id` FROM `orders` o LEFT JOIN `party` p ON o.`party` = p.`id` LEFT JOIN ( SELECT `order_id`, SUM(`qty`) as `qty_sold` FROM `sold`  GROUP BY `order_id` ) qs ON qs.`order_id` = o.`id` LEFT JOIN ( SELECT sum(`amount`) `pymt`, `order_id` FROM `payments` GROUP BY `order_id` ) py ON o.`id` = py.`order_id` LEFT JOIN `users` u ON o.`user_id` = u.`id` WHERE p.party_name LIKE 'search'  ORDER BY o.`order_date` DESC, o.`id` DESC;
 
@@ -37,6 +343,27 @@ SELECT `id`, `sku`, `product`, `pcode`, COALESCE(`price`, `mrp`) AS `price`, `qt
 
 SELECT * FROM viewstock;
 
+CREATE USER 'llziqdivqqds'@'%' IDENTIFIED WITH mysql_native_password BY 'a13ac855761e8eb41efbed62c07901a6';
+CREATE USER 'posqmojcgzwa'@'%' IDENTIFIED WITH mysql_native_password BY '81d108079fe810a3f206aa3270a424cd';
+CREATE USER ''@'%' IDENTIFIED WITH mysql_native_password BY '';
+CREATE USER ''@'%' IDENTIFIED WITH mysql_native_password BY '';
+CREATE USER ''@'%' IDENTIFIED WITH mysql_native_password BY '';
+CREATE USER ''@'%' IDENTIFIED WITH mysql_native_password BY '';
+CREATE USER ''@'%' IDENTIFIED WITH mysql_native_password BY '';
+CREATE USER ''@'%' IDENTIFIED WITH mysql_native_password BY '';
+CREATE USER ''@'%' IDENTIFIED WITH mysql_native_password BY '';
+CREATE USER ''@'%' IDENTIFIED WITH mysql_native_password BY '';
+CREATE USER ''@'%' IDENTIFIED WITH mysql_native_password BY '';
+CREATE USER ''@'%' IDENTIFIED WITH mysql_native_password BY '';
+CREATE USER ''@'%' IDENTIFIED WITH mysql_native_password BY '';
+CREATE USER ''@'%' IDENTIFIED WITH mysql_native_password BY '';
+CREATE USER ''@'%' IDENTIFIED WITH mysql_native_password BY '';
+CREATE USER ''@'%' IDENTIFIED WITH mysql_native_password BY '';
+CREATE USER ''@'%' IDENTIFIED WITH mysql_native_password BY '';
+CREATE USER ''@'%' IDENTIFIED WITH mysql_native_password BY '';
+CREATE USER ''@'%' IDENTIFIED WITH mysql_native_password BY '';
+CREATE USER ''@'%' IDENTIFIED WITH mysql_native_password BY '';
+CREATE USER ''@'%' IDENTIFIED WITH mysql_native_password BY '';
 
 
 

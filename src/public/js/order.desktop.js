@@ -1,5 +1,5 @@
 import { _viewholds, leftPanel, rightPanel } from "./_components/panels.js";
-import help, { advanceQuery, convertToDecimal, createEL, createStuff, createTable, doc, fd2json, fd2obj, generateUniqueAlphaCode, getData, getSettings, jq, log, parseCurrency, parseData, parseDecimal, parseLocal, parseLocals, parseNumber, popConfirm, queryData, removeDecimal, roundOff, setTable, showError, showTable, Storage, storeId, sumArray, xdb } from "./help.js";
+import help, { advanceQuery, convertToDecimal, createEL, createStuff, createTable, doc, fd2json, fd2obj, generateUniqueAlphaCode, getData, getSettings, isRrestricted, jq, log, parseCurrency, parseData, parseDecimal, parseLocal, parseLocals, parseNumber, popConfirm, queryData, removeDecimal, roundOff, setTable, showError, showTable, Storage, storeId, sumArray, xdb } from "./help.js";
 import { createEditParty, _loadSrchstock, numerifyObject, _scanProduct, _searchProduct, salesChart, _refreshSalesChart, holdOrder, _searchParty, _scanEAN } from "./module.js";
 import { getOrderData, hardresetData, loadBillNumber, loadOrderDetails, loadPartyDetails, quickData, refreshOrder, resetOrder, saveOrder, setItems, setTaxOnAllItems, showOrderDetails, updateDetails, updateOrder } from "./order.config.js";
 
@@ -198,7 +198,8 @@ doc.addEventListener('DOMContentLoaded', () => {
         // moveCalc();
     });
 
-    jq('#manualEntry').click(function () {
+    jq('#manualEntry').click(async function () {
+        if (await isRrestricted('YhMtmjLe')) return;
         if (jq(this).is(':checked')) {
             jq('#addManually').parent('div').removeClass('d-none');
             updateDetails({ itemsMode: 'manual' });
@@ -245,17 +246,29 @@ doc.addEventListener('DOMContentLoaded', () => {
         }
     })
 
+    function getEmptyKeys(obj) {
+        let emptyKeys = [];
+        for (let key in obj) {
+            if (obj[key] === null || obj[key] === undefined || obj[key] === '') {
+                emptyKeys.push(key);
+            }
+        }
+        return emptyKeys;
+    }
+
     jq('#addNewParty, .add-party').click(async function () {
         try {
-            let { order_type } = getOrderData();
+            let { order_type } = getOrderData(); log('ok');
+            let partyfields = getSettings().partyFields; //log(partyfields);
+            let hideFields = getEmptyKeys(partyfields);
             let res = await createEditParty({
-                modalSize: 'modal-md',
                 quick: order_type == 'taxinvoice' ? false : true,
                 focus: '#party_name',
+                hideFields,
                 callback: () => {
                     let party = res?.insertId; //log(party); return;
                     if (party) {
-                        updateDetails({ party: party, party_name: res.fd.party_name });
+                        updateDetails({ party: party, party_name: res.fd.party_name, email: res.fd?.email || null });
                         loadOrderDetails();
                     }
                 }
@@ -287,11 +300,11 @@ doc.addEventListener('DOMContentLoaded', () => {
                         callback: () => {
                             if (res.affectedRows) {
                                 let party = res.insertId;
-                                updateDetails({ party, party_name: res.fd.party_name })
+                                updateDetails({ party, party_name: res.fd.party_name, email: res.fd?.email || null });
                                 // savePartysdata(party);
                             }
                         }
-                    }); log(res);
+                    }); //log(res);
                     res.mb.addEventListener('shown.bs.modal', function () {
                         if (isNaN(val)) {
                             jq('#party_name').val(val.toUpperCase().trim());
@@ -309,23 +322,26 @@ doc.addEventListener('DOMContentLoaded', () => {
             // load party
             let tbl = createTable(data, false);
             jq(tbl.table).addClass('mb-1').removeClass('table-sm');
-            parseData({ tableObj: tbl, colsToRight: ['party_id', 'contact'], colsToShow: ['party_name', 'party_id', 'contact'] });
+            parseData({ tableObj: tbl, colsToRight: ['party_id', 'contact'], colsToShow: ['id', 'party_name', 'party_id', 'contact'] });
             jq(tbl.tbody).find('tr').addClass('role-btn').each(function (i, e) {
                 jq(e).click(function () {
-                    let party = jq(this).find(`[data-key="id"]`).text(); //log(party)
-                    let party_name = jq(this).find(`[data-key="party_name"]`).text(); //log(party_name);
-                    let party_id = jq(this).find(`[data-key="party_id"]`).text(); //log(party_name);
+                    let index = jq(this).index(); //log(index, data[index], data[index].email); return;
+                    let po = data[index];
+                    let party = po.id;// jq(this).find(`[data-key="id"]`).text(); //log(party)
+                    let party_name = po.party_name; // jq(this).find(`[data-key="party_name"]`).text(); //log(party_name);
+                    let party_id = po.party_id; // jq(this).find(`[data-key="party_id"]`).text(); //log(party_id);
+                    let email = po.email; // jq(this).find(`[data-key="email"]`).text(); //log(email);
                     jq('div.search-party').html('').addClass('d-none');
                     jq('#searchParty').val('');
                     jq('#addProduct').val('').focus();
-                    updateDetails({ party, party_name, party_id });
+                    updateDetails({ party, party_name, party_id, email });
                     loadPartyDetails();
                 })
             })
             jq('div.search-party').removeClass('d-none').html(tbl.table);
             if (key === 'Enter') {
-                let { id: party, party_name, party_id } = data[0]; //log(party, party_name, party_id); return;
-                updateDetails({ party, party_name, party_id });
+                let { id: party, party_name, party_id, email } = data[0]; //log(party, party_name, party_id); return;
+                updateDetails({ party, party_name, party_id, email });
                 jq('div.search-party').html('').addClass('d-none');
                 jq('#searchParty').val('');
                 jq('#addProduct').val('').focus();
@@ -336,17 +352,18 @@ doc.addEventListener('DOMContentLoaded', () => {
         }
     }).on('search', function () { jq('div.search-party').addClass('d-none').html('') })
 
-    jq('#searachByMemid').keyup(async function (e) {
+    jq('#searchByMemid').keyup(async function (e) {
         try {
             if (e.key == 'Enter') {
                 let party_id = this.value;
-                // let res = await advanceQuery({ key: 'srchPartyByPartyId', values: [party_id] });
-                let db = new xdb(storeId, 'partys');
-                let res = await db.searchByKey({ key: party_id, indexes: ['party_id'], limit: 1 }); //log(res[0]); //return;
+                let res = await queryData({ key: 'srchPartyByPartyId', values: [party_id] });
+                // let db = new xdb(storeId, 'partys');
+                // let res = await db.searchByKey({ key: party_id, indexes: ['party_id'], limit: 1 }); //log(res[0].email); //return;
                 if (res.length) {
                     let party = res[0].id;
                     let party_name = res[0].name;
-                    updateDetails({ party, party_name, party_id });
+                    let email = res[0].email;
+                    updateDetails({ party, party_name, party_id, email });
                     loadPartyDetails();
                     jq(this).val('');
                     jq('#addProduct').val('').focus();
@@ -356,7 +373,6 @@ doc.addEventListener('DOMContentLoaded', () => {
             log(error);
         }
     })
-
 
     jq('#selectOrderType').change(function () {
         let order_type = this.value;
@@ -466,7 +482,7 @@ doc.addEventListener('DOMContentLoaded', () => {
 
     jq('#add-item').submit(function (e) {
         e.preventDefault();
-        let scan = getOrderData().enableScan;
+        let scan = getOrderData().enableScan; //log(scan);
         if (scan) scanItem();
     })
 
@@ -629,8 +645,8 @@ doc.addEventListener('DOMContentLoaded', () => {
             } else if (disc_id == '1') {
                 // rewards
                 let { party } = getOrderData();
-                let res = await advanceQuery({ key: 'partyRwds', values: [party] });
-                let rwds = res?.data[0].rwds; //log(rwds);
+                let res = await queryData({ key: 'partyRwds', values: [party] }); //log(res); //return;                
+                let rwds = res.length ? res[0].rwds : null; //log(rwds); return;
                 jq('#discPerc').val('');
                 jq('#discType').val('#');
                 jq('#disc-value').val(rwds);
@@ -1014,7 +1030,8 @@ doc.addEventListener('DOMContentLoaded', () => {
         jq('#confirm-box').addClass('d-none');
     })
 
-    jq('a.add-bank').click(function () {
+    jq('a.add-bank').click(async function () {
+        if (await isRrestricted('FnhxaHlT')) return;
         createStuff({
             title: 'Add New Bank',
             modalSize: 'modal-md',
@@ -1454,7 +1471,7 @@ async function scanItem() {
     try {
         let sku = jq('#addProduct').val();
         if (!sku) throw 'missing sku';
-        if(sku.length < 4) return;
+        if (sku.length < 4) return;
         let arr = sku.length <= 8 ? await _scanProduct(sku) : await _scanEAN(sku);
         if (arr.length) {
             let data = arr[0];
@@ -1524,21 +1541,16 @@ function loadTags({ el, item, arr }) {
 async function searchItem() {
     try {
         let input = doc.getElementById('addProduct');
-        let val = input.value; log(val);
+        let val = input.value;
         if (!val || val.length < 2) { jq('#hybridSearchList').html(''); jq('#hybridList').addClass('d-none'); return; }
-        // let res = await advanceQuery({ key: 'srchProduct', type: 'search', searchfor: val }); //log(res);
-        // let arr = res.data; //log(arr.length);
-
-        // via indexed Db
-        // let arr = await searchStockFromIndexDB(val); //log(arr); //return;
 
         let returning = false;
         if (jq('#returnItem').is(':checked')) returning = true;
         let key = 'srchProduct';
-        let arr = [];  //await _searchProduct(val); //log(arr);
+        let arr = await _searchProduct(val);
         if (!arr.length) {
             if (returning) key = 'srchAllProduct'
-            let res = await queryData({ key, type: 'search', searchfor: val }); //log(res)
+            let res = await queryData({ key, type: 'search', searchfor: val });
             arr = res;
         }
 
@@ -1716,7 +1728,13 @@ async function searchItem() {
                         obj.qty = qty;
                         obj.price = price;
                         insertItem(obj);
-                        if (e.key == 'Enter') jq('#addProduct').select().focus();
+                        if (e.key == 'Enter') { 
+                            jq('#addProduct').select().focus();
+                            // close list
+                            jq('#hybridList').addClass('d-none');
+                            jq('#hybridList #hybridSearchList').html('');
+                            jq(input).val('').focus();
+                        };
                     }
                 });
 
